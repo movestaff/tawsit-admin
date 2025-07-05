@@ -1,7 +1,7 @@
 // ✅ AjoutTournee.tsx (formulaire complet avec tous les champs)
 
 import React, { useEffect, useState } from 'react'
-import { ajouterTournee, getConducteurs } from '../lib/api'
+import { ajouterTournee, fetchConducteurs } from '../lib/api'
 
 interface Props {
   onSuccess: () => void
@@ -27,7 +27,7 @@ function AjouterTournee({ onSuccess }: Props) {
   useEffect(() => {
     const chargerConducteurs = async () => {
       try {
-        const data = await getConducteurs()
+        const data = await fetchConducteurs()
         setConducteurs(data)
       } catch (e) {
         console.warn('❌ Erreur chargement conducteurs:', e)

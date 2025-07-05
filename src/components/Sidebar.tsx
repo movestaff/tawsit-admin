@@ -54,6 +54,19 @@ return (
     >
       <FaUsersCog /> Paramétrage
     </NavLink>
+
+
+    <NavLink
+      to="/contrats"
+      className={({ isActive }) =>
+        `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-700 transition ${
+          isActive ? 'bg-green-800' : ''
+        }`
+      }
+    >
+      <FaCogs /> Gestion des contrats
+    </NavLink>
+
     <NavLink
       to="/config"
       className={({ isActive }) =>
@@ -61,9 +74,13 @@ return (
           isActive ? 'bg-green-800' : ''
         }`
       }
+
     >
       <FaCogs /> Configuration système
     </NavLink>
+
+    
+
   </nav>
 </aside>
 

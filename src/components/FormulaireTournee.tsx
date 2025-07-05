@@ -1,11 +1,11 @@
-// ✅ Fichier mis à jour : src/components/FormulaireTournee.tsx
+// ✅ src/components/FormulaireTournee.tsx
 import React, { useEffect, useState } from 'react'
 import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
 import { Label } from '../components/ui/label'
 import { Switch } from '../components/ui/switch'
 import { toast } from 'react-toastify'
-import { ajouterTournee, updateTournee, deleteTournee } from '../lib/api'
+import { ajouterTournee, updateTournee, deleteTournee, fetchSites } from '../lib/api'
 
 interface Props {
   tournee?: any
@@ -19,14 +19,19 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
     nom: '',
     type: '',
     date: '',
-    adresse: '',
+    site_id: '',
     arrivee_lat: '',
     arrivee_lng: '',
     hr_depart_prevu: '',
     hr_arrivee_prevu: '',
     conducteur_id: '',
-    statut: true
+    statut: true,
   })
+  const [sites, setSites] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchSites().then(setSites).catch(() => toast.error("Erreur lors du chargement des sites"))
+  }, [])
 
   useEffect(() => {
     if (tournee) {
@@ -34,13 +39,13 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
         nom: tournee.nom || '',
         type: tournee.type || '',
         date: tournee.date || '',
-        adresse: tournee.adresse || '',
+        site_id: tournee.site_id || '',
         arrivee_lat: tournee.arrivee_lat || '',
         arrivee_lng: tournee.arrivee_lng || '',
         hr_depart_prevu: tournee.hr_depart_prevu || '',
         hr_arrivee_prevu: tournee.hr_arrivee_prevu || '',
         conducteur_id: tournee.conducteur_id || '',
-        statut: tournee.statut ?? true
+        statut: tournee.statut ?? true,
       })
     }
   }, [tournee])
@@ -48,6 +53,19 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSiteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const site_id = e.target.value
+    const selected = sites.find(s => s.id === site_id)
+    if (selected) {
+      setForm(prev => ({
+        ...prev,
+        site_id,
+        arrivee_lat: selected.latitude,
+        arrivee_lng: selected.longitude,
+      }))
+    }
   }
 
   const handleSubmit = async () => {
@@ -86,12 +104,12 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
   }
 
   return (
-    <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <h2 className="md:col-span-2 text-xl font-semibold">
+    <form className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+      <h2 className="md:col-span-2 text-xl font-semibold mb-2">
         {tournee ? `Modifier la tournée : ${tournee.nom}` : 'Créer une nouvelle tournée'}
       </h2>
 
-      <div>
+      <div className="md:col-span-2">
         <Label htmlFor="nom">Nom</Label>
         <Input id="nom" name="nom" value={form.nom} onChange={handleChange} placeholder="Nom de la tournée" />
       </div>
@@ -132,61 +150,55 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
         </select>
       </div>
 
-      {/* Adresse sur toute la largeur */}
       <div className="md:col-span-2">
-        <Label htmlFor="adresse">Adresse d’arrivée</Label>
-        <Input id="adresse" name="adresse" value={form.adresse} onChange={handleChange} placeholder="Lieu d’arrivée" />
+        <Label htmlFor="site_id">Site de destination</Label>
+        <select
+          id="site_id"
+          name="site_id"
+          value={form.site_id}
+          onChange={handleSiteChange}
+          className="border rounded px-2 py-2 w-full"
+        >
+          <option value="">-- Choisir un site --</option>
+          {sites.map((site) => (
+            <option key={site.id} value={site.id}>{site.nom}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Latitude / Longitude sur une seule ligne */}
-      <div>
-        <Label htmlFor="arrivee_lat">Latitude</Label>
-        <Input id="arrivee_lat" name="arrivee_lat" value={form.arrivee_lat} onChange={handleChange} />
-      </div>
-      <div>
-        <Label htmlFor="arrivee_lng">Longitude</Label>
-        <Input id="arrivee_lng" name="arrivee_lng" value={form.arrivee_lng} onChange={handleChange} />
-      </div>
-
-      {/* Heure départ / arrivée sur la même ligne */}
       <div>
         <Label htmlFor="hr_depart_prevu">Heure départ</Label>
         <Input type="time" id="hr_depart_prevu" name="hr_depart_prevu" value={form.hr_depart_prevu} onChange={handleChange} />
       </div>
+
       <div>
         <Label htmlFor="hr_arrivee_prevu">Heure arrivée</Label>
         <Input type="time" id="hr_arrivee_prevu" name="hr_arrivee_prevu" value={form.hr_arrivee_prevu} onChange={handleChange} />
       </div>
 
-      {/* Statut switch */}
-      <div className="flex items-center gap-3">
-        <Label htmlFor="statut">Statut</Label>
-        <Switch
-          checked={form.statut}
-          onChange={(val) => setForm({ ...form, statut: val })}
-        />
-        <span>{form.statut ? 'Actif' : 'Inactif'}</span>
-      </div>
+      <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-4 border-t pt-4 mt-2">
+        <div className="flex items-center gap-3">
+          <Label htmlFor="statut">Statut</Label>
+          <Switch
+            checked={form.statut}
+            onChange={(val) => setForm({ ...form, statut: val })}
+          />
+          <span>{form.statut ? 'Actif' : 'Inactif'}</span>
+        </div>
 
-      {/* Boutons */}
-      <div className="md:col-span-2 flex justify-start gap-4 mt-6">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Annuler
+        <div className="flex gap-3">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>Annuler</Button>
+          )}
+          <Button type="button" onClick={handleSubmit} className="bg-primary text-white hover:bg-green-700">
+            {tournee ? 'Mettre à jour' : 'Enregistrer'}
           </Button>
-        )}
-        <Button type="button" onClick={handleSubmit}>
-          {tournee ? 'Mettre à jour' : 'Enregistrer'}
-        </Button>
-        {tournee && (
-          <Button
-            type="button"
-            onClick={handleDelete}
-            className="bg-orange-600 hover:bg-orange-700 text-white"
-          >
-            Supprimer
-          </Button>
-        )}
+          {tournee && (
+            <Button type="button" onClick={handleDelete} className="bg-orange-500 text-white hover:bg-orange-600">
+              Supprimer
+            </Button>
+          )}
+        </div>
       </div>
     </form>
   )
