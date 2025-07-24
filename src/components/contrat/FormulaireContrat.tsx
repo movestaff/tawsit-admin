@@ -33,6 +33,11 @@ type FormulaireContratProps = {
 }
 
 export default function FormulaireContrat({ contrat, onClose, prestataires }: FormulaireContratProps) {
+
+  const [focusStates, setFocusStates] = useState<Record<string, boolean>>({})
+
+  const handleFocus = (field: string) => setFocusStates(prev => ({ ...prev, [field]: true }))
+  const handleBlur = (field: string) => setFocusStates(prev => ({ ...prev, [field]: false }))
   const [form, setForm] = useState<Contrat>({ alerte_expiration_days: 30, statut: 'actif' })
 const { profile } = useUserProfile()
   useEffect(() => {
@@ -100,27 +105,49 @@ if (form.id) {
 
         <div className="space-y-4 py-4">
 
-          <div>
-            <label className="text-sm font-medium text-gray-700">Numéro du contrat</label>
-            <Input
-              type="text"
-              value={form.numero_contrat || ''}
-              onChange={e => handleChange('numero_contrat', e.target.value)}
-              className="mt-1"
-            />
-          </div>
+          <div className="relative">
+                <Input
+                  id="numero_contrat"
+                  type="text"
+                  value={form.numero_contrat || ''}
+                  onChange={e => handleChange('numero_contrat', e.target.value)}
+                  className="border rounded px-3 py-3 w-full"
+                  autoComplete="off"
+                />
+                <label
+                  htmlFor="numero_contrat"
+                  className={`
+                    absolute left-3 px-1 bg-white text-gray-500 text-sm transition-all duration-200 pointer-events-none
+                    ${form.numero_contrat ? '-top-2 text-xs text-primary' : 'top-1/2 -translate-y-1/2'}
+                  `}
+                >
+                  Numéro du contrat
+                </label>
+              </div>
 
-          <div>
-            <label className="text-sm font-medium text-gray-700">Prestataire</label>
-            <select
-              className="w-full border rounded p-2 mt-1"
-              value={form.prestataire_id || ''}
-              onChange={e => handleChange('prestataire_id', e.target.value)}
-            >
-              <option value="">-- Sélectionner un prestataire --</option>
-              {prestataires.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-            </select>
-          </div>
+              <div className="relative">
+                  <select
+                    id="prestataire_id"
+                    className="border rounded px-3 py-3 w-full bg-white appearance-none"
+                    value={form.prestataire_id || ''}
+                    onChange={e => handleChange('prestataire_id', e.target.value)}
+                  >
+                    <option value="">-- Sélectionner un prestataire --</option>
+                    {prestataires.map(p => (
+                      <option key={p.id} value={p.id}>{p.nom}</option>
+                    ))}
+                  </select>
+                  <label
+                    htmlFor="prestataire_id"
+                    className={`
+                      absolute left-3 px-1 bg-white text-gray-500 text-sm transition-all duration-200 pointer-events-none
+                      ${form.prestataire_id ? '-top-2 text-xs text-primary' : 'top-1/2 -translate-y-1/2'}
+                    `}
+                  >
+                    Prestataire
+                  </label>
+                </div>
+
 
           <div>
             <label className="text-sm font-medium text-gray-700">Date début</label>
@@ -132,32 +159,70 @@ if (form.id) {
             <Input type="date" value={form.date_fin || ''} onChange={e => handleChange('date_fin', e.target.value)} className="mt-1" />
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-gray-700">Montant total</label>
-            <Input type="number" value={form.montant_total || ''} onChange={e => handleChange('montant_total', e.target.value)} className="mt-1" />
-          </div>
+          <div className="relative">
+  <Input
+    id="montant_total"
+    type="number"
+    value={form.montant_total || ''}
+    onChange={e => handleChange('montant_total', e.target.value)}
+    className="border rounded px-3 py-3 w-full"
+  />
+  <label
+    htmlFor="montant_total"
+    className={`
+      absolute left-3 px-1 bg-white text-gray-500 text-sm transition-all duration-200 pointer-events-none
+      ${form.montant_total ? '-top-2 text-xs text-primary' : 'top-1/2 -translate-y-1/2'}
+    `}
+  >
+    Montant total
+  </label>
+</div>
+
 
           
-            <div>
-                  <label className="text-sm font-medium text-gray-700">Fréquence paiement</label>
-                  <select
-                    className="w-full border rounded p-2 mt-1"
-                    value={form.frequence_paiement || ''}
-                    onChange={e => handleChange('frequence_paiement', e.target.value)}
-                  >
-                    <option value="">-- Sélectionner --</option>
-                    <option value="mensuelle">Mensuelle</option>
-                    <option value="bimensuelle">Bimensuelle</option>
-                    <option value="hebdomadaire">Hebdomadaire</option>
-                  </select>
-            </div>
+            <div className="relative">
+  <select
+    id="frequence_paiement"
+    className="border rounded px-3 py-3 w-full bg-white appearance-none"
+    value={form.frequence_paiement || ''}
+    onChange={e => handleChange('frequence_paiement', e.target.value)}
+  >
+    <option value="">-- Sélectionner --</option>
+    <option value="mensuelle">Mensuelle</option>
+    <option value="bimensuelle">Bimensuelle</option>
+    <option value="hebdomadaire">Hebdomadaire</option>
+  </select>
+  <label
+    htmlFor="frequence_paiement"
+    className={`
+      absolute left-3 px-1 bg-white text-gray-500 text-sm transition-all duration-200 pointer-events-none
+      ${form.frequence_paiement ? '-top-2 text-xs text-primary' : 'top-1/2 -translate-y-1/2'}
+    `}
+  >
+    Fréquence paiement
+  </label>
+</div>
 
           
+<div className="relative">
+  <Input
+    id="alerte_expiration_days"
+    type="number"
+    value={form.alerte_expiration_days || ''}
+    onChange={e => handleChange('alerte_expiration_days', parseInt(e.target.value))}
+    className="border rounded px-3 py-3 w-full"
+  />
+  <label
+    htmlFor="alerte_expiration_days"
+    className={`
+      absolute left-3 px-1 bg-white text-gray-500 text-sm transition-all duration-200 pointer-events-none
+      ${form.alerte_expiration_days ? '-top-2 text-xs text-primary' : 'top-1/2 -translate-y-1/2'}
+    `}
+  >
+    Jours avant alerte expiration
+  </label>
+</div>
 
-          <div>
-            <label className="text-sm font-medium text-gray-700">Jours avant alerte expiration</label>
-            <Input type="number" value={form.alerte_expiration_days || ''} onChange={e => handleChange('alerte_expiration_days', parseInt(e.target.value))} className="mt-1" />
-          </div>
 
           {form.id && (
             <div className="flex items-center justify-between border p-2 rounded">
