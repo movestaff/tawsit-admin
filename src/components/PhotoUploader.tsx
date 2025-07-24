@@ -8,10 +8,11 @@ interface Props {
   employeId: string
   photoUrl?: string
   onPhotoUploaded: (url: string) => void
+  readonly?: boolean   
 }
 
 
-const PhotoUploader: React.FC<Props> = ({ employeId, onPhotoUploaded }) => {
+const PhotoUploader: React.FC<Props> = ({ employeId, onPhotoUploaded, readonly }) => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
 
@@ -46,7 +47,7 @@ const PhotoUploader: React.FC<Props> = ({ employeId, onPhotoUploaded }) => {
     <div className="flex flex-col items-center gap-2 mb-4">
       <Button
         type="button"
-        disabled={loading}
+        disabled={loading || readonly}
         onClick={() => inputRef.current?.click()}
         className="text-sm"
       >

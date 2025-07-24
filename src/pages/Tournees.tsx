@@ -111,18 +111,15 @@ function Tournees() {
   const tourneesAffichees = filteredTournees.slice((page - 1) * rowsPerPage, page * rowsPerPage)
 
   return (
+    
     <div className="p-6">
       <h1 className="text-2xl font-bold text-primary mb-6">Gestion des tournées</h1>
+          
+      <Dialog open={formVisible} onOpenChange={(open) => {setFormVisible(open) 
+        if (!open) setSelected(null)  }}>
 
-      <Dialog open={formVisible} onOpenChange={(open) => {
-        setFormVisible(open)
-        if (!open) setSelected(null)
-      }}>
-        <Dialog open={formVisible} onOpenChange={(open) => {
-  setFormVisible(open)
-  if (!open) setSelected(null)
-}}>
-  <DialogContent className="w-full !max-w-5xl">
+       <DialogContent className="w-full !max-w-5xl">
+
     <DialogHeader>
       <DialogTitle>{selected ? 'Modifier une tournée' : 'Créer une tournée'}</DialogTitle>
     </DialogHeader>
@@ -140,7 +137,7 @@ function Tournees() {
       }}
     />
   </DialogContent>
-</Dialog>
+
       </Dialog>
 
       <Dialog open={pointsModal} onOpenChange={(open) => setPointsModal(open)}>

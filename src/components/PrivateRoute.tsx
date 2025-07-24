@@ -1,12 +1,13 @@
-// src/components/PrivateRoute.tsx
+
 // src/components/PrivateRoute.tsx
 import React, { useEffect, useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import type { ReactElement } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { supabase } from '../lib/supabaseClient'
 
 export default function PrivateRoute({ children }: { children: ReactElement }) {
-  const { isAuthenticated, selectedSocieteId, checkSession } = useAuthStore()
+  const { isAuthenticated, selectedSocieteId, checkSession, token, logout } = useAuthStore()
   const location = useLocation()
   const [isCheckingSession, setIsCheckingSession] = useState(true)
 
@@ -17,8 +18,22 @@ export default function PrivateRoute({ children }: { children: ReactElement }) {
       await checkSession()
       setIsCheckingSession(false)
     }
+
+    
     verifierSession()
-  }, [])
+
+      // Vérification périodique toutes les minutes
+    const interval = setInterval(async () => {
+      const { data } = await supabase.auth.getSession()
+      if (!data.session) {
+        logout()
+        
+      }
+    }, 60 * 1000) // chaque minute
+
+    return () => clearInterval(interval)
+  }, [checkSession, logout])
+  
 
   if (isCheckingSession) {
     // ✅ Important : spinner ou placeholder qui évite unmount complet
@@ -29,7 +44,7 @@ export default function PrivateRoute({ children }: { children: ReactElement }) {
     )
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !token) {
     return <Navigate to="/" state={{ from: location }} replace />
   }
 

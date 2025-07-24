@@ -1,6 +1,6 @@
 // ✅ src/App.tsx
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react';
 import PrivateRoute from './components/PrivateRoute';
 import DashboardLayout from './components/layouts/DashboardLayout';
@@ -9,6 +9,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import { useAuthStore } from './store/authStore';
+import { useEffect } from 'react';
+import { supabase } from './lib/supabaseClient';
 
 
 // Lazy-loaded pages
@@ -30,8 +33,33 @@ const Paiement = lazy(() => import('./pages/facturation/PaiementsPage'));
 const Facturation = lazy(() => import('./pages/facturation/Facturation'));
 const AutoPlanificationAssistant = lazy(() => import('./pages/Autoplan/AutoPlanificationAssistant'));
 const Prestataires = lazy(() => import('./pages/Prestataires'));
+const PlanificationCalendrier = lazy(() => import('./pages/PlanificationCalendrier'));
+const ListeExecutionsTournees = lazy(() => import ('./pages/ListeExecutionsTournees'));
+const GestionTournee = lazy(() => import ('./pages/GestionTournee'));
+
+
+
 
 function App() {
+
+  const { initAuthListener, checkSession, logout } = useAuthStore();
+
+  useEffect(() => {
+  checkSession();
+  initAuthListener();
+
+  const interval = setInterval(async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      logout();
+      console.warn('⚠️ Session expirée : utilisateur déconnecté automatiquement.');
+    }
+  }, 5 * 60 * 1000);
+
+  return () => clearInterval(interval);
+}, [initAuthListener, checkSession, logout]);
+
+  
   return (
     <BrowserRouter>
       <Suspense fallback={<div style={{ textAlign: 'center', marginTop: '2rem' }}>Chargement...</div>}>
@@ -63,6 +91,10 @@ function App() {
                     <Route path="facturation" element={<Facturation />} />
                     <Route path="assistant-planification" element={<AutoPlanificationAssistant />} />
                     <Route path="prestataires" element={<Prestataires />} />
+                    <Route path="planificationcalendrier" element={<PlanificationCalendrier />} />
+                    <Route path="listeExecutionstournees" element={<ListeExecutionsTournees />} />
+                    <Route path="gestion-tournee" element={<GestionTournee />} />
+
                   </Routes>
                 </DashboardLayout>
               </PrivateRoute>

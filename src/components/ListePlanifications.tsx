@@ -55,6 +55,7 @@ const ListePlanifications: React.FC<Props> = ({ planifications, onEdit, onRefres
         <thead className="bg-gray-100">
           <tr>
             <th className="px-4 py-2">Tournée</th>
+            <th className="px-4 py-2">Conducteur</th>
             <th className="px-4 py-2">Type</th>
             <th className="px-4 py-2">Départ</th>
             <th className="px-4 py-2">Arrivée</th>
@@ -66,6 +67,8 @@ const ListePlanifications: React.FC<Props> = ({ planifications, onEdit, onRefres
           {planFiltres.map((plan) => (
             <tr key={plan.id} className="border-b hover:bg-gray-50">
               <td className="px-4 py-2">{plan.tournee?.nom || '-'}</td>
+              <td className="px-4 py-2">{plan.tournee?.profils?.display_name || '-'}
+</td>
               <td className="px-4 py-2 capitalize">
                 {plan.recurrence_type === 'unique' && `Unique (${plan.date_unique})`}
                 {plan.recurrence_type === 'hebdomadaire' && `Hebdo (${plan.jours_semaine?.join(', ')})`}
@@ -82,13 +85,11 @@ const ListePlanifications: React.FC<Props> = ({ planifications, onEdit, onRefres
               </td>
               <td className="px-4 py-2 flex gap-2">
                 <Button size="sm" variant="ghost" onClick={() => onEdit(plan)}>
-                  <Pencil className="w-4 h-4" />
+                  <Pencil className="w-5 h-5 text-blue-600" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => onDuplicate(plan)}>
-                  <Copy className="w-4 h-4" />
-                </Button>
+                
                 <Button size="sm" variant="ghost" onClick={() => onDelete(plan.id)}>
-                  <Trash className="w-4 h-4 text-red-600" />
+                  <Trash className="w-5 h-5 text-red-600" />
                 </Button>
               </td>
             </tr>

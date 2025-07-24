@@ -85,19 +85,32 @@ export default function ModalEditionPrestataire({
   }
 };
 
-  const handleSubmit = async () => {
+ const handleSubmit = async () => {
   if (!form.nom.trim()) {
     toast.error('❌ Le nom est obligatoire.');
     return;
   }
+
   try {
     setLoading(true);
     await onSave(form);
     toast.success('✅ Les modifications du prestataire ont été enregistrées avec succès !');
     onClose();
-  } catch (error) {
-    console.error(error);
-    toast.error('❌ Impossible d\'enregistrer les modifications. Veuillez réessayer.');
+  } catch (err) {
+    console.error(err);
+
+    // ✅ Cast pour TypeScript
+    const error = err as any;
+
+    let message = '❌ Impossible d\'enregistrer les modifications. Veuillez réessayer.';
+
+    if (error?.response?.data?.error) {
+      message = error.response.data.error;
+    } else if (error?.message) {
+      message = error.message;
+    }
+
+    toast.error(message);
   } finally {
     setLoading(false);
   }
@@ -110,32 +123,34 @@ export default function ModalEditionPrestataire({
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+        <Dialog.Panel className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl">
           <Dialog.Title className="text-xl font-bold mb-4">
             {initialData ? 'Éditer Prestataire' : 'Nouveau Prestataire'}
           </Dialog.Title>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(textFields).map(([key, value]) => (
-              <InputFlottant
-                key={key}
-                id={key}
-                name={key}
-                label={key === 'id_fiscale' ? 'ID Fiscale' : key.charAt(0).toUpperCase() + key.slice(1)}
-                value={value ?? ''}
-                onChange={handleChange}
-                required={key === 'nom'}
-              />
-            ))}
+           {Object.entries(textFields).map(([key, value]) => (
+                <InputFlottant
+                    key={key}
+                    id={key}
+                    name={key}
+                    label={key === 'id_fiscale' ? 'ID Fiscale' : key.charAt(0).toUpperCase() + key.slice(1)}
+                    value={value ?? ''}
+                    onChange={handleChange}
+                    required={key === 'nom'}
+                    className={key === 'nom' || key === 'adresse' ? 'md:col-span-2' : ''}
+                />
+                ))}
+
           </div>
 
-         <div className="mt-4">
-  <Switch
-    checked={actif}
-    onChange={(value) => setForm((prev) => ({ ...prev, actif: value }))}
-    label="Actif"
-  />
-</div>
+                    <div className="mt-4">
+                    <Switch
+                        checked={actif}
+                        onChange={(value) => setForm((prev) => ({ ...prev, actif: value }))}
+                        label="Actif"
+                    />
+                    </div>
 
 
           <div className="mt-6 flex justify-end space-x-3">

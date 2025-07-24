@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react'
 import { retirerAffectation, fetchAffectationsEmploye } from '../lib/api'
 import { Button } from './ui/button'
 import { toast } from 'react-toastify'
+import { Trash } from 'lucide-react'
 
 interface Props {
   employeId: string
+  readonly?: boolean
 }
 
-const AffectationsEmploye: React.FC<Props> = ({ employeId }) => {
+const AffectationsEmploye: React.FC<Props> = ({ employeId, readonly }) => {
   console.log('✅ AffectationsEmploye monté')
   const [affectations, setAffectations] = useState<any[]>([])
 
@@ -67,13 +69,17 @@ const AffectationsEmploye: React.FC<Props> = ({ employeId }) => {
               <p className="text-sm text-gray-600">Ordre : {a.ordre}</p>
             )}
           </div>
+         
+         {!readonly && (
           <Button
-            type='button'
-            variant="destructive"
+         
+            variant="ghost"
+            size='sm'
             onClick={() => handleSupprimer(a.id, a.type)}
           >
-            🗑 Retirer
+            <Trash className="w-5 h-5 text-red-600" />
           </Button>
+          )}
         </div>
       ))}
     </div>

@@ -1,5 +1,7 @@
 // src/components/VehiculeSelector.tsx
 
+// src/components/VehiculeSelector.tsx
+
 import { useEffect, useState } from 'react';
 import {
   Paper,
@@ -15,55 +17,54 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
-import { fetchVehicules } from '../../lib/api';
-
 export type VehiculeSelectorProps = {
   selected: Vehicule[];
   onChange: (value: Vehicule[]) => void;
   active: boolean;
+  vehiculesDisponibles: Vehicule[];
 };
 
 export type Vehicule = {
   id: string;
-  nom: string;
+  immatriculation: string;
+  marque: string;
+  modele: string;
+  annee: number;
   capacite: number;
   disponible: boolean;
+  prestataires?: {
+    id: string;
+    nom: string;
+  };
 };
 
-export default function VehiculeSelector({ selected, onChange, active }: VehiculeSelectorProps) {
-  const [vehicules, setVehicules] = useState<Vehicule[]>([]);
+export default function VehiculeSelector({
+  selected,
+  onChange,
+  active,
+  vehiculesDisponibles
+}: VehiculeSelectorProps) {
   const [filteredVehicules, setFilteredVehicules] = useState<Vehicule[]>([]);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!active || vehicules.length > 0) return; // évite le rechargement inutile
-    const load = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchVehicules();
-        setVehicules(data);
-        setFilteredVehicules(data);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+    setFilteredVehicules(vehiculesDisponibles);
+  }, [vehiculesDisponibles]);
 
   useEffect(() => {
     if (!search) {
-      setFilteredVehicules(vehicules);
+      setFilteredVehicules(vehiculesDisponibles);
     } else {
+      const lower = search.toLowerCase();
       setFilteredVehicules(
-        vehicules.filter((v) =>
-          v.nom.toLowerCase().includes(search.toLowerCase())
+        vehiculesDisponibles.filter((v) =>
+          v.immatriculation?.toLowerCase().includes(lower) ||
+          v.capacite?.toString().includes(lower) ||
+          v.prestataires?.nom?.toLowerCase().includes(lower)
         )
       );
     }
-  }, [search, vehicules]);
+  }, [search, vehiculesDisponibles]);
 
   const handleToggle = (vehicule: Vehicule) => {
     if (selected.find((v) => v.id === vehicule.id)) {
@@ -74,51 +75,78 @@ export default function VehiculeSelector({ selected, onChange, active }: Vehicul
   };
 
   return (
-    <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>
+    <Paper className="border-2 border-primary bg-secondary p-4 rounded-lg shadow-card">
+      <Typography variant="h6" gutterBottom className="text-primary">
         🚐 Sélection des véhicules disponibles
       </Typography>
 
       <TextField
         fullWidth
         variant="outlined"
-        placeholder="Rechercher un véhicule..."
+        placeholder="Rechercher par immatriculation, capacité ou prestataire..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon />
+              <SearchIcon className="text-primary" />
             </InputAdornment>
           ),
         }}
-        sx={{ mb: 2 }}
+        sx={{
+          mb: 2,
+          '& .MuiOutlinedInput-root': {
+            '&.Mui-focused fieldset': {
+              borderColor: 'var(--tw-color-primary)'
+            }
+          }
+        }}
       />
 
-      {loading ? (
-        <CircularProgress />
+      {!active ? (
+        <div className="flex justify-center my-4">
+          <CircularProgress />
+        </div>
       ) : (
         <List dense>
-          {filteredVehicules.map((vehicule) => (
-            <ListItem
-              key={vehicule.id}
-              button
-              onClick={() => handleToggle(vehicule)}
-              selected={!!selected.find((v) => v.id === vehicule.id)}
-            >
-              <ListItemText
-                primary={`${vehicule.nom} (Capacité : ${vehicule.capacite})`}
-                secondary={vehicule.disponible ? '✅ Disponible' : '❌ Indisponible'}
-              />
-              <ListItemSecondaryAction>
-                <Checkbox
-                  edge="end"
-                  onChange={() => handleToggle(vehicule)}
-                  checked={!!selected.find((v) => v.id === vehicule.id)}
+          {filteredVehicules.map((vehicule) => {
+            const isSelected = !!selected.find((v) => v.id === vehicule.id);
+            return (
+              <ListItem
+                key={vehicule.id}
+                button
+                onClick={() => handleToggle(vehicule)}
+                selected={isSelected}
+                sx={{
+                  '&.Mui-selected': {
+                    backgroundColor: 'var(--tw-color-primary)/10',
+                    color: 'var(--tw-color-primary)'
+                  },
+                  '&.Mui-selected:hover': {
+                    backgroundColor: 'var(--tw-color-primary)/20'
+                  }
+                }}
+              >
+                <ListItemText
+                  primary={`${vehicule.immatriculation} (Capacité : ${vehicule.capacite})`}
+                  secondary={`Prestataire : ${vehicule.prestataires?.nom ?? '-'}`}
                 />
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
+                <ListItemSecondaryAction>
+                  <Checkbox
+                    edge="end"
+                    onChange={() => handleToggle(vehicule)}
+                    checked={isSelected}
+                    sx={{
+                      color: 'var(--tw-color-primary)',
+                      '&.Mui-checked': {
+                        color: 'var(--tw-color-primary)'
+                      }
+                    }}
+                  />
+                </ListItemSecondaryAction>
+              </ListItem>
+            );
+          })}
         </List>
       )}
     </Paper>

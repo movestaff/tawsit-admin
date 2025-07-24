@@ -1,4 +1,5 @@
 export interface Periode {
+  contrat: any
   id: string
   label: string
   date_debut: string

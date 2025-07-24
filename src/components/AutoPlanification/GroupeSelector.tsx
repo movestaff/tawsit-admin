@@ -1,127 +1,159 @@
-
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Paper,
-  TextField,
   List,
   ListItem,
   ListItemText,
-  Checkbox,
   ListItemSecondaryAction,
-  Typography,
-  CircularProgress,
-  InputAdornment
+  Checkbox,
+  TextField,
+  Typography
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+import {
+  fetchGroupesEmployes,
+  fetchSites,
+  fetchGroupesDejaPlanifies,
+} from '../../lib/api';
+import { toast } from 'react-toastify';
 
-import { fetchGroupesEmployes } from '../../lib/api';
-
-export type GroupeSelectorProps = {
+type GroupeSelectorProps = {
+  planificationType: 'depart' | 'retour';
   selected: string[];
-  onChange: (value: string[]) => void;
+  onChange: (newSelected: string[]) => void;
   active: boolean;
 };
 
-export default function GroupeSelector({ selected, onChange, active }: GroupeSelectorProps) {
-  const [groupes, setGroupes] = useState<GroupeEmploye[]>([]);
-  const [filteredGroupes, setFilteredGroupes] = useState<GroupeEmploye[]>([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+
+interface Groupe {
+  id: string;
+  nom: string;
+  site_id: string;
+  heure_debut: string;
+  heure_fin: string;
+  recurrence_type: string;
+  type: string;
+}
+
+interface Site {
+  id: string;
+  nom: string;
+}
+
+export default function GroupeSelector({ 
+  planificationType,
+  selected,
+  onChange,
+  active 
+}: { 
+  planificationType: 'depart' | 'retour';
+  selected: string[];
+  onChange: (newSelected: string[]) => void;
+  active: boolean;
+}) 
+
+
+{
+  const [groupes, setGroupes] = useState<Groupe[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
-    if (!active || groupes.length > 0) return; // évite le rechargement inutile
+    if (!active) return;
+
     const load = async () => {
-      setLoading(true);
       try {
-        const data = await fetchGroupesEmployes();
-        setGroupes(data);
-        setFilteredGroupes(data);
-      } catch (e) {
+        // ✅ Charger tous les groupes, les sites et les groupes déjà planifiés
+        const [allGroupes, sitesRes, planifiésRes] = await Promise.all([
+          fetchGroupesEmployes(),
+          fetchSites(),
+          fetchGroupesDejaPlanifies()
+        ]);
+
+        const groupesActifsIds = planifiésRes?.groupesIds || [];
+
+        // ✅ Filtrer les groupes déjà planifiés
+        const groupesDisponibles = (allGroupes || []).filter(
+          (g: Groupe) => !groupesActifsIds.includes(g.id)
+        );
+
+        setGroupes(groupesDisponibles);
+        setSites(Array.isArray(sitesRes) ? sitesRes : []);
+      } catch (e: any) {
         console.error(e);
-      } finally {
-        setLoading(false);
+        toast.error("❌ Erreur lors du chargement des groupes ou des sites");
       }
     };
+
     load();
-  }, []);
+  }, [active]);
 
-  useEffect(() => {
-    if (!search) {
-      setFilteredGroupes(groupes);
-    } else {
-      setFilteredGroupes(
-        groupes.filter((g) =>
-          g.nom.toLowerCase().includes(search.toLowerCase())
-        )
-      );
-    }
-  }, [search, groupes]);
+  const siteNames = Object.fromEntries(sites.map(site => [site.id, site.nom]));
 
-  const handleToggle = (id: string) => {
+  // ✅ Filtrage texte + type départ
+  const filteredGroupes = (groupes || [])
+    .filter(g => g.type === planificationType)
+    .filter(g => g.nom.toLowerCase().includes(filter.toLowerCase()));
+
+  // ✅ Sélection unique
+  const handleSelect = (id: string) => {
     if (selected.includes(id)) {
-      onChange(selected.filter((i) => i !== id));
+      onChange([]);
     } else {
-      onChange([...selected, id]);
+      onChange([id]);
     }
   };
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <div>
       <Typography variant="h6" gutterBottom>
-        📋 Sélection des groupes de travail
+        📋 Sélectionnez un groupe
       </Typography>
 
       <TextField
         fullWidth
-        variant="outlined"
-        placeholder="Rechercher un groupe..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
-        }}
-        sx={{ mb: 2 }}
+        label="Filtrer par nom"
+        value={filter}
+        onChange={e => setFilter(e.target.value)}
+        margin="normal"
       />
 
-      {loading ? (
-        <CircularProgress />
-      ) : (
-        <List dense>
-          {filteredGroupes.map((groupe) => (
-            <ListItem
-              key={groupe.id}
-              button
-              onClick={() => handleToggle(groupe.id)}
-              selected={selected.includes(groupe.id)}
-            >
-              <ListItemText
-                primary={groupe.nom}
-                secondary={`Site: ${groupe.site_id} | Début: ${groupe.horaire_debut ?? '-'} | Fin: ${groupe.horaire_fin ?? '-'}`}
+      <List dense>
+        {filteredGroupes.map((groupe) => (
+          <ListItem
+            key={groupe.id}
+            button
+            onClick={() => handleSelect(groupe.id)}
+            selected={selected.includes(groupe.id)}
+            sx={{
+              '&.Mui-selected': {
+                backgroundColor: 'var(--tw-color-primary)/10',
+                color: 'var(--tw-color-primary)'
+              },
+              '&.Mui-selected:hover': {
+                backgroundColor: 'var(--tw-color-primary)/20'
+              }
+            }}
+          >
+            <ListItemText
+              primary={groupe.nom}
+              secondary={`Site: ${siteNames[groupe.site_id] ?? groupe.site_id} | Début: ${groupe.heure_debut ?? '-'} | Fin: ${groupe.heure_fin ?? '-'}`}
+            />
+
+            <ListItemSecondaryAction>
+              <Checkbox
+                edge="end"
+                onChange={() => handleSelect(groupe.id)}
+                checked={selected.includes(groupe.id)}
+                sx={{
+                  color: 'var(--tw-color-primary)',
+                  '&.Mui-checked': {
+                    color: 'var(--tw-color-primary)'
+                  }
+                }}
               />
-              <ListItemSecondaryAction>
-                <Checkbox
-                  edge="end"
-                  onChange={() => handleToggle(groupe.id)}
-                  checked={selected.includes(groupe.id)}
-                />
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
-        </List>
-      )}
-    </Paper>
+            </ListItemSecondaryAction>
+          </ListItem>
+        ))}
+      </List>
+    </div>
   );
 }
-
-// Exemple type GroupeEmploye (adapte-le à tes modèles réels)
-export type GroupeEmploye = {
-  id: string;
-  nom: string;
-  site_id: string;
-  horaire_debut?: string;
-  horaire_fin?: string;
-};

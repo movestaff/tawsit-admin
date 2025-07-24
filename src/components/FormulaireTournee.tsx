@@ -18,7 +18,7 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
   const [form, setForm] = useState({
     nom: '',
     type: '',
-    date: '',
+  
     site_id: '',
     arrivee_lat: '',
     arrivee_lng: '',
@@ -38,7 +38,7 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
       setForm({
         nom: tournee.nom || '',
         type: tournee.type || '',
-        date: tournee.date || '',
+        
         site_id: tournee.site_id || '',
         arrivee_lat: tournee.arrivee_lat || '',
         arrivee_lng: tournee.arrivee_lng || '',
@@ -69,7 +69,7 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
   }
 
   const handleSubmit = async () => {
-    if (!form.nom || !form.date || !form.type || !form.conducteur_id) {
+    if (!form.nom  || !form.type || !form.conducteur_id) {
       toast.error('Veuillez remplir tous les champs obligatoires.')
       return
     }
@@ -129,10 +129,7 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
         </select>
       </div>
 
-      <div>
-        <Label htmlFor="date">Date</Label>
-        <Input type="date" id="date" name="date" value={form.date} onChange={handleChange} />
-      </div>
+      
 
       <div>
         <Label htmlFor="conducteur_id">Conducteur</Label>

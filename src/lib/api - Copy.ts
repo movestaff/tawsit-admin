@@ -66,54 +66,46 @@ export async function fetchTournees() {
 }
 
 export async function ajouterTournee(tournee: any) {
-  const res = await fetch(`${API_BASE_URL}/tournees`, {
+  return fetchWithAuth(`${API_BASE_URL}/tournees`, {
     method: 'POST',
     headers: getAuthHeaders('application/json'),
     body: JSON.stringify(tournee),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  });
 }
+
 export async function updateTournee(id: string, tournee: any) {
-  const res = await fetch(`${API_BASE_URL}/tournees/${id}`, {
+  return fetchWithAuth(`${API_BASE_URL}/tournees/${id}`, {
     method: 'PATCH',
     headers: getAuthHeaders('application/json'),
     body: JSON.stringify(tournee),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  });
 }
 
 
 export async function deleteTournee(id: string) {
-  const res = await fetch(`${API_BASE_URL}/tournees/${id}`, {
+  return fetchWithAuth(`${API_BASE_URL}/tournees/${id}`, {
     method: 'DELETE',
-    headers: getAuthHeaders('application/json')
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.status === 204 ? true : res.json()
+    headers: getAuthHeaders('application/json'),
+  });
 }
+
 
 // ================== CONDUCTEURS ==================
 // Liste des conducteurs pour les tournées
 export async function fetchConducteurs() {
-  const res = await fetch(`${API_BASE_URL}/tournees/conducteurs`, {
+  return fetchWithAuth(`${API_BASE_URL}/tournees/conducteurs`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  });
 }
+
 
 export async function fetchConducteurGestion() {
-  const res = await fetch(`${API_BASE_URL}/conducteurs`, {
+  return fetchWithAuth(`${API_BASE_URL}/conducteurs`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  });
 }
-
 
 
 // Ajouter un conducteur
@@ -199,17 +191,6 @@ export async function deleteEmploye(id: string) {
   return res.json()
 }
 
-export async function fetchEmployeById(id: string) {
-  const res = await fetch(`${API_BASE_URL}/employes/${id}`, {
-    method: 'GET',
-    headers: getAuthHeaders('application/json'),
-  });
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(errorText);
-  }
-  return res.json(); // <-- NE PAS remettre await res.text() ailleurs
-}
 // =======================AFFECTATIONS EMPLOYE==================
 export async function fetchAffectationsEmploye(employeId: string) {
   const res = await fetch(`${API_BASE_URL}/affectations/${employeId}`, {
@@ -690,11 +671,11 @@ export async function fetchGroupesDejaPlanifies() {
  * Ajoute une nouvelle planification
  * POST /planifications/admin
  */
-export async function ajouterPlanification(planifObj: any) {
+export async function ajouterPlanification(planification: any) {
   const res = await fetch(`${API_BASE_URL}/planifications`, {
     method: 'POST',
     headers: getAuthHeaders('application/json'),
-    body: JSON.stringify(planifObj),
+    body: JSON.stringify(planification),
   })
   if (!res.ok) {
     const err = await res.json()
@@ -864,13 +845,13 @@ export async function fetchVehiculesDisponiblesPourPlanning(planning: {
 //====================================================================================================
 //========================== ================== SITES ==================
 export async function fetchSites() {
-  return fetchWithAuth(`${API_BASE_URL}/site`, {
+  const res = await fetch(`${API_BASE_URL}/site`, {
     method: 'GET',
     headers: getAuthHeaders('application/json')
   })
-  
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
 }
-
 
 export async function ajouterSite(site: any) {
   const res = await fetch(`${API_BASE_URL}/site`, {
@@ -1400,72 +1381,6 @@ export async function updateServiceContrat(id: string, payload: any) {
 }
 
 
-// ✅ Lister les documents d'un contrat
-export async function fetchDocumentsContrat(contratId: any) {
-  const res = await fetch(`${API_BASE_URL}/contrats/${contratId}/documents`, {
-    method: 'GET',
-    headers: getAuthHeaders('application/json')
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-// ✅ Ajouter un document à un contrat
-export const uploadDocumentContrat = async (contratId: string, file: File): Promise<any> => {
-  const token =
-    JSON.parse(localStorage.getItem('supabase.auth.token') || '{}')?.currentSession?.access_token ||
-    useAuthStore.getState().token
-
-  const societeId = useAuthStore.getState().selectedSocieteId
-
-  if (!token || !societeId) {
-    throw new Error("Authentification ou société non disponible")
-  }
-console.log('Document à uploader:', file);
-  const formData = new FormData()
-  formData.append('document', file)
-  console.log('FormData:', formData.get('document'));
-
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/contrats/${contratId}/documents`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'x-societe-id': societeId,
-    },
-    body: formData,
-  })
-
-  const result = await response.json()
-
-  if (!response.ok) {
-    throw new Error(result.error || 'Échec du téléversement')
-  }
-
-  return result
-}
-
-
-// ✅ Obtenir un document précis
-export async function getDocumentContratById(documentId: any) {
-  const res = await fetch(`${API_BASE_URL}/contrats/documents/${documentId}`, {
-    method: 'GET',
-    headers: getAuthHeaders('application/json')
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-// ✅ Supprimer un document d'un contrat
-export async function deleteDocumentContrat(documentId: any) {
-  const res = await fetch(`${API_BASE_URL}/contrats/documents/${documentId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders('application/json')
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-
 //======================================gestion facturation contrats========================================
 
 
@@ -1642,83 +1557,4 @@ export async function deletePrestataire(id: string) {
   }
 
   return await response.json();
-}
-
-// =========================execution tournee==================================
-
-export async function fetchExecutions() {
-  const res = await fetch(`${API_BASE_URL}/executions`, {
-    method: 'GET',
-    headers: getAuthHeaders('application/json'),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-export async function fetchPlanificationById(id: string) {
-  const res = await fetch(
-    `${API_BASE_URL}/planifications/detail/${id}`,
-    {
-      method: 'GET',
-      headers: getAuthHeaders('application/json'),
-    }
-  );
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-
-
-export async function fetchIncidentById(id: string) {
-  const res = await fetch(`${API_BASE_URL}/incidents/${id}`, {
-    method: 'GET',
-    headers: getAuthHeaders('application/json'),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-
-export async function createExecution(data: {
-  tournee_id: string
-  conducteur_id: string,
-  id_planification: string,
-  execution_parent_id?: string
-}) {
-  const response = await fetch(`${API_BASE_URL}/executions`, {
-    method: 'POST',
-    headers: getAuthHeaders('application/json'),
-    body: JSON.stringify(data)
-  })
-
-  const result = await response.json()
-  console.log('Envoi vers API:', data)
-  if (!response.ok) {
-    throw new Error(result.error || 'Erreur lors de la création de l’exécution')
-  }
-
-  return result
-}
-
-export async function updateExecutionStatus(executionId: string, statut: string) {
-  const res = await fetch(`${API_BASE_URL}/executions/${executionId}/statut`, {
-    method: 'PATCH',
-    headers: getAuthHeaders('application/json'),
-    body: JSON.stringify({ statut }),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-
-// Ajout au fichier api.ts
-
-export async function fetchEmbarquementsByExecution(executionId: string) {
-  const res = await fetch(`${API_BASE_URL}/embarquements/execution/${executionId}`, {
-    method: 'GET',
-    headers: getAuthHeaders('application/json'),
-  });
-
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
 }

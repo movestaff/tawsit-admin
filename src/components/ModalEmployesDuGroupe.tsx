@@ -52,6 +52,7 @@ export default function ModalEmployesDuGroupe({ groupe, onClose }: any) {
       </div>
 
       <div className="overflow-x-auto rounded border border-neutral bg-white shadow-sm">
+        <div className="max-h-[60vh] overflow-y-auto">
         <table className="min-w-full text-sm text-gray-800">
           <thead>
             <tr className="bg-secondary text-left font-semibold text-gray-700">
@@ -78,6 +79,7 @@ export default function ModalEmployesDuGroupe({ groupe, onClose }: any) {
             ))}
           </tbody>
         </table>
+        </div>
         <p className="text-xs text-gray-500 p-2">Total : {employesFiltres.length} employé(s)</p>
       </div>
 

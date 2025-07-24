@@ -80,15 +80,25 @@ type Props = {
 
   // Stats
   const totalEmployes = Object.values(previewResult.employesByGroupe || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-  const allClusters = Object.values(previewResult.clustersByGroupe || {}).flat();
-  const totalClusters = allClusters.length;
+  // ➜ 1️⃣ Clusters à afficher sur la MAP (exclure retourFlexible)
+const mapClusters = Object.values(previewResult.clustersByGroupe || {})
+  .flat()
+  .filter((c: any) => !c.retourFlexible);
+const totalClusters = mapClusters.length;
 
-  // Calcul véhicules réellement utilisés (set des indices utilisés)
-  const vehiculesUtilisesSet = new Set(allClusters.map(c => c.vehicule).filter(v => v !== undefined && v !== null));
-  const totalVehiculesUtilises = vehiculesUtilisesSet.size;
+// ➜ 2️⃣ TOUS les clusters (inclure retourFlexible) pour compter les véhicules
+const allClustersForCount = Object.values(previewResult.clustersByGroupe || {}).flat();
+const vehiculesUtilisesSet = new Set(
+  allClustersForCount
+    .map(c => c.vehicule)
+    .filter(v => v !== undefined && v !== null)
+);
+const totalVehiculesUtilises = vehiculesUtilisesSet.size;
+
 
   // Centre map
-  const allCoords = allClusters.map((c: any) => [c.latitude, c.longitude]);
+  const allCoords = mapClusters.map((c: any) => [c.latitude, c.longitude])
+  .filter(([lat, lng]) => typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng));
   const avgLat = allCoords.length ? allCoords.reduce((sum, [lat]) => sum + lat, 0) / allCoords.length : 45.5;
   const avgLng = allCoords.length ? allCoords.reduce((sum, [, lng]) => sum + lng, 0) / allCoords.length : -73.5;
 
@@ -113,55 +123,61 @@ type Props = {
         <CardContent>
          
           <MapContainer center={[avgLat, avgLng]} zoom={12} style={{ height: '400px', width: '100%' }}>
-            <TileLayer
-              attribution='&copy; OpenStreetMap contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {previewResult.groupes.map((groupe) =>
-              (previewResult.clustersByGroupe?.[groupe.id] ?? [])
-                .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
-                .map((c, idx) => (
-                  <Marker key={`${groupe.id}-${idx}`} position={[c.latitude, c.longitude]} icon ={customIcon}>
-                    <Popup>
-                      <Typography variant="subtitle2">{groupe.nom}</Typography>
-                      <Typography variant="body2">Cluster #{idx + 1}</Typography>
-                      <Typography variant="body2">Ordre : {c.ordre ?? '-'}</Typography>
-                      <Typography variant="body2">
-                        Véhicule: {vehiculesByIndex[c.vehicule]?.immatriculation ?? 'N/A'}
-                      </Typography>
-                      <Typography variant="body2">Distance max : {c.distance_max_m ?? 'N/A'} m</Typography>
-                      <Typography variant="body2">Valide : {c.valide ? '✅' : '❌'}</Typography>
-                      <Typography variant="body2">Nb Employés : {c.employes?.length ?? 0}</Typography>
-                    </Popup>
-                  </Marker>
+  <TileLayer
+    attribution='&copy; OpenStreetMap contributors'
+    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  />
 
-                  
-                ))
-            )}
+  {/* Affichage des clusters de type DEPART uniquement (exclusion des retours flexibles) */}
+  {previewResult.groupes.map((groupe) =>
+    (previewResult.clustersByGroupe?.[groupe.id] ?? [])
+      .filter(c => !c.retourFlexible)
+      .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
+      .map((c, idx) => (
+        <Marker
+          key={`${groupe.id}-${idx}`}
+          position={[c.latitude, c.longitude]}
+          icon={customIcon}
+        >
+          <Popup>
+            <Typography variant="subtitle2">{groupe.nom}</Typography>
+            <Typography variant="body2">Cluster #{idx + 1}</Typography>
+            <Typography variant="body2">Ordre : {c.ordre ?? '-'}</Typography>
+            <Typography variant="body2">
+              Véhicule: {vehiculesByIndex[c.vehicule]?.immatriculation ?? 'N/A'}
+            </Typography>
+            <Typography variant="body2">Distance max : {c.distance_max_m ?? 'N/A'} m</Typography>
+            <Typography variant="body2">Valide : {c.valide ? '✅' : '❌'}</Typography>
+            <Typography variant="body2">Nb Employés : {c.employes?.length ?? 0}</Typography>
+          </Popup>
+        </Marker>
+      ))
+  )}
 
-            {/* Sites de destination */}
-            {Object.entries(previewResult.siteById || {}).map(([siteId, site]) => (
-              <Marker
-                key={`site-${siteId}`}
-                position={[site.lat, site.lng]}
-                icon={L.icon({
-                  iconUrl: '/destination-icon.png',   // mets ici l'icône différente que tu veux
-                  iconSize: [30, 45],
-                  iconAnchor: [15, 45],
-                  popupAnchor: [0, -40],
-                  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-                  shadowSize: [41, 41],
-                  shadowAnchor: [12, 41],
-                })}
-              >
-                <Popup>
-                  <Typography variant="subtitle2">🏁 Destination : {site.nom}</Typography>
-                  <Typography variant="body2">Lat : {site.lat.toFixed(6)}</Typography>
-                  <Typography variant="body2">Lng : {site.lng.toFixed(6)}</Typography>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+  {/* Sites de destination */}
+  {Object.entries(previewResult.siteById || {}).map(([siteId, site]) => (
+    <Marker
+      key={`site-${siteId}`}
+      position={[site.lat, site.lng]}
+      icon={L.icon({
+        iconUrl: '/destination-icon.png',
+        iconSize: [30, 45],
+        iconAnchor: [15, 45],
+        popupAnchor: [0, -40],
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        shadowSize: [41, 41],
+        shadowAnchor: [12, 41],
+      })}
+    >
+      <Popup>
+        <Typography variant="subtitle2">🏁 Destination : {site.nom}</Typography>
+        <Typography variant="body2">Lat : {site.lat.toFixed(6)}</Typography>
+        <Typography variant="body2">Lng : {site.lng.toFixed(6)}</Typography>
+      </Popup>
+    </Marker>
+  ))}
+</MapContainer>
+
         </CardContent>
       </Card>
 
@@ -237,14 +253,14 @@ type Props = {
               value={filterVehicule}
               onChange={(e) => setFilterVehicule(e.target.value)}
             />
-          </Box>
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Groupe</TableCell>
-                  <TableCell># Cluster</TableCell>
-               <TableCell>Site</TableCell>
+                  </Box>
+                    <TableContainer component={Paper}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Groupe</TableCell>
+                            <TableCell># Cluster</TableCell>
+                        <TableCell>Site</TableCell>
                   
                   <TableCell>Immatriculation</TableCell>
                   
@@ -256,56 +272,71 @@ type Props = {
                   <TableCell>Action</TableCell>
                 </TableRow>
               </TableHead>
-             <TableBody>
+
+
+              <TableBody>
   {previewResult.groupes.flatMap((groupe) =>
     (previewResult.clustersByGroupe?.[groupe.id] ?? [])
       .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
       .filter((cluster) => {
-        // Site
+        // ➜ Filtres déjà existants
         const siteNom = previewResult.siteById?.[groupe.site_id]?.nom?.toLowerCase() || '';
         if (filterSite && !siteNom.includes(filterSite.toLowerCase())) return false;
-
-        // Véhicule immatriculation
         const vehicule = previewResult.vehiculesDisponibles?.[cluster.vehicule ?? 0];
         const immat = vehicule?.immatriculation?.toLowerCase() || '';
         if (filterVehicule && !immat.includes(filterVehicule.toLowerCase())) return false;
-
-        // Groupe nom
         if (filterGroupe && !groupe.nom.toLowerCase().includes(filterGroupe.toLowerCase())) return false;
-
         return true;
       })
       .map((cluster, idx) => {
         const vehicule = previewResult.vehiculesDisponibles?.[cluster.vehicule ?? 0];
+
         return (
-          <TableRow key={`${groupe.id}-${idx}`}>
+          <TableRow
+            key={`${groupe.id}-${idx}`}
+            sx={cluster.retourFlexible ? { bgcolor: '#f9f9f9' } : {}}
+          >
             <TableCell>{groupe.nom}</TableCell>
             <TableCell>{idx + 1}</TableCell>
-            <TableCell>
-              {previewResult.siteById?.[groupe.site_id]?.nom || '-'}
-            </TableCell>
+            <TableCell>{previewResult.siteById?.[groupe.site_id]?.nom || '-'}</TableCell>
             <TableCell>{vehicule?.immatriculation || '-'}</TableCell>
-            <TableCell>{cluster.distance_max_m ?? '-'}</TableCell>
-            <TableCell>
-              {cluster.valide ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}
-            </TableCell>
-            <TableCell>{cluster.employes?.length || 0}</TableCell>
-            <TableCell>{groupe.recurrence_type ?? '-'}</TableCell>
-            <TableCell>
-              {groupe.recurrence_type === 'unique'
-                ? `Unique (${groupe.date_unique || ''})`
-                : `${groupe.recurrence_type || '-'} ${groupe.jours_semaine?.join(', ') || groupe.jours_mois?.join(', ') || ''}`}
-            </TableCell>
-            <TableCell>
-              <Button variant="outlined" size="small" onClick={() => handleOpenDialog(cluster, groupe)}>
-                Détails
-              </Button>
-            </TableCell>
+
+            <>
+  {cluster.retourFlexible ? (
+    <>
+      <TableCell colSpan={5}>
+        🚐 Retour flexible : {cluster.employes?.length ?? 0} employés affectés
+      </TableCell>
+      <TableCell>
+        <Button variant="outlined" size="small" onClick={() => handleOpenDialog(cluster, groupe)}>
+          Détails
+        </Button>
+      </TableCell>
+    </>
+  ) : (
+    <>
+      <TableCell>{cluster.distance_max_m ?? '-'}</TableCell>
+      <TableCell>
+        {cluster.valide ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}
+      </TableCell>
+      <TableCell>{cluster.employes?.length || 0}</TableCell>
+      <TableCell>{groupe.recurrence_type ?? '-'}</TableCell>
+      <TableCell>
+        <Button variant="outlined" size="small" onClick={() => handleOpenDialog(cluster, groupe)}>
+          Détails
+        </Button>
+      </TableCell>
+    </>
+  )}
+</>
+
           </TableRow>
         );
       })
   )}
 </TableBody>
+
+   
             </Table>
           </TableContainer>
         </CardContent>
@@ -342,20 +373,32 @@ type Props = {
                 Employés affectés
               </Typography>
               <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
-                <ul>
-                  {(selectedCluster.employes || []).map((id: string) => {
-                    const employe = Object.values(previewResult.employesByGroupe || {})
-                      .flat()
-                      .find((e): e is Employe => (e as Employe).ID === id);
-                    return (
-                      <li key={id}>
-                        {employe
-                          ? `${employe.nom} ${employe.prenom} (${employe.email || ''}) (${employe.telephone || ''}) (${employe.matricule || ''})`
-                          : id}
-                      </li>
-                    );
-                  })}
-                </ul>
+               <ul>
+  {(selectedCluster.employes || []).map((emp: any, index: number) => {
+    // Cas retourFlexible : c'est déjà l'objet complet
+    if (selectedCluster.retourFlexible) {
+      return (
+        <li key={emp.ID ?? index}>
+          {emp.matricule ?? ''} - {emp.nom} {emp.prenom} ({emp.email ?? ''}) ({emp.telephone ?? ''})
+        </li>
+      );
+    }
+
+    // Cas DEPART : ids simples -> lookup
+    const employe = Object.values(previewResult.employesByGroupe || {})
+      .flat()
+      .find((e): e is Employe => (e as Employe).ID === emp);
+
+    return (
+      <li key={emp}>
+        {employe
+          ? `${employe.matricule ?? ''} - ${employe.nom} ${employe.prenom} (${employe.email ?? ''}) (${employe.telephone ?? ''})`
+          : emp}
+      </li>
+    );
+  })}
+</ul>
+
               </Box>
             </>
           )}

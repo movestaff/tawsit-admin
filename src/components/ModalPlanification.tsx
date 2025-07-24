@@ -36,15 +36,14 @@ const ModalPlanification: React.FC<Props> = ({ open, onClose, onRefresh, planifi
                </Dialog.Title>
 
                     <FormulairePlanification
-                    planification={planification}
-                    enDuplication={enDuplication} // ✅ Ajout
-                    onSuccess={() => {
-                    onClose()
-                    onRefresh()
-                }}  
-                    onCancel={onClose}
-                    tournees={tournees}
-/>
+            planification={planification}
+            enDuplication={enDuplication} // ✅ Ajout
+            onSuccess={() => {
+              onClose()
+              onRefresh()
+            } }
+            onCancel={onClose}
+            tournees={tournees} id={''} readonly={false}/>
 
         </Dialog.Panel>
       </div>

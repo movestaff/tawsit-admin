@@ -1,11 +1,14 @@
 import React, { useMemo } from 'react'
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar'
 import moment from 'moment'
-import 'moment/locale/fr'
+import fr from 'moment/locale/fr';
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { toast } from 'react-toastify'
+import CustomToolbar from './CustomToolbar';
 
-moment.locale('fr')
+moment.updateLocale('fr', fr);
+moment.locale('fr');
+
 const localizer = momentLocalizer(moment)
 
 interface CalendrierPlanificationsProps {
@@ -29,15 +32,16 @@ function genererEvenements(planifications: any[]): any[] {
   dans30Jours.setDate(now.getDate() + 30)
 
   planifications.forEach(plan => {
+    const conducteurName = plan.tournee?.profils?.display_name ?? '';
     const base = {
       resource: {
         id: plan.id,
         statut: plan.active ? 'active' : 'inactif',
         tournee_id: plan.tournee_id,
-        conducteur: plan.conducteur || null
+        conducteur: conducteurName,
       },
-      title: plan.tournee?.nom || 'Tournée',
-    }
+      title: `${plan.tournee?.nom ?? 'Tournée'}${conducteurName ? ' - ' + conducteurName : ''}`,
+    };
 
     if (plan.recurrence_type === 'unique' && plan.date_unique) {
       const start = fusionnerDateEtHeure(plan.date_unique, plan.heure_depart)
@@ -95,28 +99,38 @@ function genererEvenements(planifications: any[]): any[] {
 const CalendrierPlanifications: React.FC<CalendrierPlanificationsProps> = ({ planifications, filtreTexte, filtreType, filtreStatut }) => {
   const texte = (filtreTexte ?? '').toLowerCase()
 
-  const planFiltres = useMemo(() => planifications.filter(plan => {
-    const nom = plan?.tournee?.nom?.toLowerCase?.() || ''
-    const recurrence = plan?.recurrence_type?.toLowerCase?.() || ''
-    const date = plan?.date_unique?.toLowerCase?.() || ''
-    const js = Array.isArray(plan?.jours_semaine) ? plan.jours_semaine.join(', ').toLowerCase() : ''
-    const jm = Array.isArray(plan?.jours_mois) ? plan.jours_mois.join(', ').toLowerCase() : ''
-    const dep = plan?.heure_depart?.toLowerCase?.() || ''
-    const arr = plan?.heure_arrivee?.toLowerCase?.() || ''
-    const statut = plan?.active ? 'active' : 'inactif'
+  const planFiltres = useMemo(() => {
+    return planifications.filter(plan => {
+      const tourneNom = plan?.tournee?.nom ?? ''
+      const conducteurNom = plan?.tournee?.profils?.display_name ?? ''
+      const combinedLabel = `${tourneNom} - ${conducteurNom}`.toLowerCase()
 
-    const matchTexte = texte === '' ||
-      nom.includes(texte) || recurrence.includes(texte) || date.includes(texte) ||
-      js.includes(texte) || jm.includes(texte) || dep.includes(texte) || arr.includes(texte) ||
-      statut.includes(texte)
+      const recurrence = plan?.recurrence_type?.toLowerCase() ?? ''
+      const date = plan?.date_unique?.toLowerCase() ?? ''
+      const js = Array.isArray(plan?.jours_semaine) ? plan.jours_semaine.join(', ').toLowerCase() : ''
+      const jm = Array.isArray(plan?.jours_mois) ? plan.jours_mois.join(', ').toLowerCase() : ''
+      const dep = plan?.heure_depart?.toLowerCase() ?? ''
+      const arr = plan?.heure_arrivee?.toLowerCase() ?? ''
+      const statut = plan?.active ? 'active' : 'inactif'
 
-    const matchType = filtreType === '' || plan.recurrence_type === filtreType
-    const matchStatut = filtreStatut === '' ||
-      (filtreStatut === 'active' && plan.active) ||
-      (filtreStatut === 'inactive' && !plan.active)
+      const matchTexte = texte === '' ||
+        combinedLabel.includes(texte) ||
+        recurrence.includes(texte) ||
+        date.includes(texte) ||
+        js.includes(texte) ||
+        jm.includes(texte) ||
+        dep.includes(texte) ||
+        arr.includes(texte) ||
+        statut.includes(texte)
 
-    return matchTexte && matchType && matchStatut
-  }), [planifications, texte, filtreType, filtreStatut])
+      const matchType = filtreType === '' || plan.recurrence_type === filtreType
+      const matchStatut = filtreStatut === '' ||
+        (filtreStatut === 'active' && plan.active) ||
+        (filtreStatut === 'inactive' && !plan.active)
+
+      return matchTexte && matchType && matchStatut
+    })
+  }, [planifications, texte, filtreType, filtreStatut])
 
   const events = useMemo(() => genererEvenements(planFiltres), [planFiltres])
 
@@ -129,6 +143,7 @@ const CalendrierPlanifications: React.FC<CalendrierPlanificationsProps> = ({ pla
         endAccessor="end"
         style={{ height: 600 }}
         views={['month', 'week', 'day', 'agenda']}
+        components={{ toolbar: CustomToolbar }}
         defaultView="week"
         onSelectEvent={(event) => toast.info(`Tournée: ${event.title}`)}
         eventPropGetter={(event) => {
@@ -136,9 +151,28 @@ const CalendrierPlanifications: React.FC<CalendrierPlanificationsProps> = ({ pla
           return { style: { backgroundColor: bg, color: 'white' } }
         }}
         messages={{
-          month: 'Mois', week: 'Semaine', day: 'Jour', agenda: 'Agenda',
-          today: "Aujourd'hui", previous: 'Préc.', next: 'Suiv.',
+          month: 'Mois',
+          week: 'Semaine',
+          day: 'Jour',
+          agenda: 'Agenda',
+          today: "Aujourd'hui",
+          previous: 'Préc.',
+          next: 'Suiv.',
           showMore: (total) => `+ ${total} de plus`
+        }}
+        formats={{
+          dayRangeHeaderFormat: (range, culture, localizer) =>
+            `${localizer!.format(range.start, 'DD/MM/YYYY', culture)} – ${localizer!.format(range.end, 'DD/MM/YYYY', culture)}`,
+          dayHeaderFormat: (date, culture, localizer) =>
+            localizer!.format(date, 'dddd DD/MM', culture),
+          dayFormat: (date, culture, localizer) =>
+            localizer!.format(date, 'DD/MM', culture),
+          agendaDateFormat: (date, culture, localizer) =>
+            localizer!.format(date, 'DD/MM', culture),
+          monthHeaderFormat: (date, culture, localizer) =>
+            localizer!.format(date, 'MMMM YYYY', culture),
+          agendaHeaderFormat: (range, culture, localizer) =>
+            `${localizer!.format(range.start, 'DD/MM/YYYY', culture)} – ${localizer!.format(range.end, 'DD/MM/YYYY', culture)}`,
         }}
       />
     </div>

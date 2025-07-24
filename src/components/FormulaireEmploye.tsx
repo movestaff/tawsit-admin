@@ -14,9 +14,10 @@ interface Props {
   employe?: any
   onSuccess: () => void
   onCancel?: () => void
+  readonly?: boolean;
 }
 
-const FormulaireEmploye: React.FC<Props> = ({ employe, onSuccess, onCancel }) => {
+const FormulaireEmploye: React.FC<Props> = ({ employe, onSuccess, onCancel, readonly }) => {
   const [form, setForm] = useState<{
     nom: string
     prenom: string
@@ -66,7 +67,7 @@ const handleBlur = (field: string) => {
 
 
   useEffect(() => {
-    if (employe) {
+    if (employe && (employe.ID || employe.id)) {
       setForm({
         nom: employe.nom || '',
         prenom: employe.prenom || '',
@@ -84,7 +85,7 @@ const handleBlur = (field: string) => {
         longitude: employe.longitude,
       })
     }
-  }, [employe])
+  }, [employe?.ID, employe?.id])
 
   useEffect(() => {
     if (employe?.ID && form.photo) {
@@ -175,17 +176,18 @@ const handleBlur = (field: string) => {
               className="w-32 h-32 rounded-full object-cover border-2 border-primary shadow mb-2"
               style={{ minWidth: 96, minHeight: 96 }}
             />
-            {employe?.ID && (
-              <PhotoUploader
-                employeId={employe.ID}
-                photoUrl={form.photo}
-                onPhotoUploaded={(url) => setForm(prev => ({ ...prev, photo: url }))}
-              />
-            )}
+            {employe?.ID && !readonly && (
+  <PhotoUploader
+    employeId={employe.ID}
+    photoUrl={form.photo}
+    onPhotoUploaded={(url) => setForm(prev => ({ ...prev, photo: url }))}
+  />
+)}
+
           </div>
           <div className="flex gap-4 items-center w-full">
-            <Input id="nom" name="nom" value={form.nom} onChange={handleChange} placeholder="Nom" className="font-bold text-lg" />
-            <Input id="prenom" name="prenom" value={form.prenom} onChange={handleChange} placeholder="Prénom" className="font-bold text-lg" />
+            <Input id="nom" name="nom" value={form.nom} onChange={handleChange} placeholder="Nom" className="font-bold text-lg" readOnly={readonly} />
+            <Input id="prenom" name="prenom" value={form.prenom} onChange={handleChange} placeholder="Prénom" className="font-bold text-lg" readOnly={readonly} />
           </div>
         </div>
 
@@ -209,6 +211,7 @@ const handleBlur = (field: string) => {
         onFocus={() => handleFocus(id)}
         onBlur={() => handleBlur(id)}
         className="border rounded px-3 py-3 w-full focus:outline-none focus:ring focus:border-primary"
+        readOnly={readonly}
       />
       <label
         htmlFor={id}
@@ -232,9 +235,9 @@ const handleBlur = (field: string) => {
             id="latitude"
             name="latitude"
             value={form.latitude ?? ''}
-            readOnly
             placeholder="Latitude"
             className="w-full md:max-w-xs h-10"
+            readOnly={readonly}
           />
           <Input
             id="longitude"
@@ -243,36 +246,44 @@ const handleBlur = (field: string) => {
             readOnly
             placeholder="Longitude"
             className="w-full md:max-w-xs h-10"
+            
           />
-          <Button
+          {!readonly && (
+            <Button
             type="button"
             className="bg-primary hover:bg-primary/90 text-white font-semibold h-10 px-6 mt-[2px] min-w-[200px] text-sm"
             onClick={() => setOpenMap(true)}
+            
           >
             📍Choisir sur la carte
           </Button>
+          )}
+          
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 mt-2">
           <div className="flex items-center gap-3">
             <span className="text-gray-700 font-medium">Statut</span>
-            <Switch checked={form.actif} onChange={(val) => setForm({ ...form, actif: val })} />
+            <Switch checked={form.actif} onChange={(val) => setForm({ ...form, actif: val })} disabled={readonly} />
             <span>{form.actif ? 'Actif' : 'Inactif'}</span>
           </div>
           <div className="flex gap-3 ml-auto">
             {employe && (
+              !readonly && (
               <Button type="button" className="bg-orange-600 hover:bg-orange-700 text-white" onClick={handleDelete}>
                 Supprimer
               </Button>
-            )}
+            ))}
             {onCancel && (
               <Button type="button" variant="outline" onClick={onCancel}>
                 Fermer la fiche
               </Button>
             )}
+            {!readonly && (
             <Button type="button" className="bg-primary text-white" onClick={handleSubmit}>
               {employe ? 'Mettre à jour' : 'Enregistrer'}
             </Button>
+            )}
           </div>
         </div>
       </form>
@@ -282,19 +293,23 @@ const handleBlur = (field: string) => {
           <div className="bg-white border rounded shadow p-4">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-lg font-semibold">Tournées affectées</h3>
-              <Button
-                type='button'
-                variant="outline"
-                className="text-sm"
-                onClick={() => setShowAffectation(!showAffectation)}
-              >
-                {showAffectation ? 'Fermer le formulaire' : '➕ Affecter une tournée'}
-              </Button>
+              {!readonly && (
+  <Button
+    type='button'
+    variant="outline"
+    className="text-sm"
+    onClick={() => setShowAffectation(!showAffectation)}
+  >
+    {showAffectation ? 'Fermer le formulaire' : '➕ Affecter une tournée'}
+  </Button>
+)}
+
             </div>
 
             <AffectationsEmploye
               employeId={employe.ID}
               key={refreshAffectations.toString()}
+              readonly={readonly}
             />
 
             {showAffectation && (

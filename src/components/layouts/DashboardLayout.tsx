@@ -26,12 +26,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           }>
             <FaMapMarkerAlt /> Carte temps réel
           </NavLink>
-          <NavLink to="/tournees" className={({ isActive }) =>
+          <NavLink to="/gestion-tournee" className={({ isActive }) =>
             `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-700 transition ${isActive ? 'bg-green-800' : ''}`
           }>
             <FaBus /> Gestion des tournées
           </NavLink>
-          <NavLink to="/planification" className={({ isActive }) =>
+          <NavLink to="/planificationcalendrier" className={({ isActive }) =>
             `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-700 transition ${isActive ? 'bg-green-800' : ''}`
           }>
             <FaCalendarAlt /> Gestion des planifications

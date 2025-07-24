@@ -26,17 +26,23 @@ export default function PeriodeTable({
     <div className="overflow-x-auto rounded border">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Label</th>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Dates</th>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Statut</th>
-            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
-          </tr>
-        </thead>
+  <tr>
+    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Label</th>
+    
+    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">N° Contrat</th>
+    
+    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prestataire</th>
+    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Dates</th>
+    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Statut</th>
+    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
+  </tr>
+</thead>
         <tbody className="divide-y divide-gray-100">
           {periodes.map((p) => (
             <tr key={p.id} className="hover:bg-gray-50">
               <td className="px-4 py-2">{p.label}</td>
+                <td className="px-4 py-2">{p.contrat?.numero_contrat || '—'}</td>
+      <td className="px-4 py-2">{p.contrat?.prestataire?.nom || '—'}</td>
               <td className="px-4 py-2">
                 {p.date_debut} ➜ {p.date_fin}
               </td>

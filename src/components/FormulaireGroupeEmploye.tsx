@@ -16,7 +16,7 @@ export default function FormulaireGroupeEmploye({ groupe, onSuccess, onCancel }:
     type: string
     recurrence_type: string
     jours_semaine: string[]
-    jours_mois: number[]
+    jours_mois: string
     date_unique: string
     site_id: string
   }>({
@@ -26,7 +26,7 @@ export default function FormulaireGroupeEmploye({ groupe, onSuccess, onCancel }:
     type: 'depart',
     recurrence_type: 'unique',
     jours_semaine: [],
-    jours_mois: [],
+    jours_mois: '',
     date_unique: '',
     site_id: ''
   })
@@ -38,20 +38,23 @@ export default function FormulaireGroupeEmploye({ groupe, onSuccess, onCancel }:
   }, [])
 
   useEffect(() => {
-    if (groupe) {
-      setForm({
-        nom: groupe.nom || '',
-        heure_debut: groupe.heure_debut || '',
-        heure_fin: groupe.heure_fin || '',
-        type: groupe.type || 'depart',
-        recurrence_type: groupe.recurrence_type || 'unique',
-        jours_semaine: groupe.jours_semaine || [],
-        jours_mois: groupe.jours_mois || [],
-        date_unique: groupe.date_unique || '',
-        site_id: groupe.site_id || ''
-      })
-    }
-  }, [groupe])
+  if (groupe) {
+    setForm({
+      nom: groupe.nom || '',
+      heure_debut: groupe.heure_debut || '',
+      heure_fin: groupe.heure_fin || '',
+      type: groupe.type || 'depart',
+      recurrence_type: groupe.recurrence_type || 'unique',
+      jours_semaine: (groupe.jours_semaine || []).map((j: string) =>
+        j.charAt(0).toUpperCase() + j.slice(1).toLowerCase()
+      ),
+      jours_mois: (groupe.jours_mois || []).join(','),
+      date_unique: groupe.date_unique || '',
+      site_id: groupe.site_id || ''
+    })
+  }
+}, [groupe])
+
 
   const handleChange = (key: string, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -59,8 +62,22 @@ export default function FormulaireGroupeEmploye({ groupe, onSuccess, onCancel }:
 
   const handleSubmit = async (e: any) => {
     e.preventDefault()
+
     try {
-      await createOrUpdateGroupeEmployes(groupe ? { id: groupe.id, ...form } : form)
+      // ✅ Nettoyage jours_mois avant envoi
+      const payload: any = {
+        ...form,
+        jours_mois: form.jours_mois
+          ? form.jours_mois
+              .split(',')
+              .map((n) => parseInt(n.trim()))
+              .filter((n) => !isNaN(n))
+          : []
+      }
+
+      if (groupe?.id) payload.id = groupe.id
+
+      await createOrUpdateGroupeEmployes(payload)
       toast.success('Groupe enregistré')
       onSuccess()
     } catch (err: any) {
@@ -82,12 +99,22 @@ export default function FormulaireGroupeEmploye({ groupe, onSuccess, onCancel }:
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block mb-1 font-medium">Heure de départ</label>
-          <Input type="time" value={form.heure_debut} onChange={(e) => handleChange('heure_debut', e.target.value)} required />
+          <Input
+            type="time"
+            value={form.heure_debut}
+            onChange={(e) => handleChange('heure_debut', e.target.value)}
+            required
+          />
         </div>
 
         <div>
           <label className="block mb-1 font-medium">Heure d’arrivée</label>
-          <Input type="time" value={form.heure_fin} onChange={(e) => handleChange('heure_fin', e.target.value)} required />
+          <Input
+            type="time"
+            value={form.heure_fin}
+            onChange={(e) => handleChange('heure_fin', e.target.value)}
+            required
+          />
         </div>
 
         <div>
@@ -110,7 +137,10 @@ export default function FormulaireGroupeEmploye({ groupe, onSuccess, onCancel }:
 
         <div>
           <label className="block mb-1 font-medium">Récurrence</label>
-          <Select value={form.recurrence_type} onChange={(e) => handleChange('recurrence_type', e.target.value)}>
+          <Select
+            value={form.recurrence_type}
+            onChange={(e) => handleChange('recurrence_type', e.target.value)}
+          >
             <option value="unique">Unique</option>
             <option value="hebdomadaire">Hebdomadaire</option>
             <option value="mensuelle">Mensuelle</option>
@@ -121,7 +151,12 @@ export default function FormulaireGroupeEmploye({ groupe, onSuccess, onCancel }:
       {form.recurrence_type === 'unique' && (
         <div>
           <label className="block mb-1 font-medium">Date</label>
-          <Input type="date" value={form.date_unique} onChange={(e) => handleChange('date_unique', e.target.value)} required />
+          <Input
+            type="date"
+            value={form.date_unique}
+            onChange={(e) => handleChange('date_unique', e.target.value)}
+            required
+          />
         </div>
       )}
 
@@ -150,11 +185,14 @@ export default function FormulaireGroupeEmploye({ groupe, onSuccess, onCancel }:
 
       {form.recurrence_type === 'mensuelle' && (
         <div>
-          <label className="block mb-1 font-medium">Jours du mois (ex: 1,15,30)</label>
+          <label className="block mb-1 font-medium">
+            Jours du mois (séparés par des virgules)
+          </label>
           <Input
             type="text"
-            value={form.jours_mois.join(',')}
-            onChange={(e) => handleChange('jours_mois', e.target.value.split(',').map((n: string) => parseInt(n.trim())).filter(n => !isNaN(n)))}
+            placeholder="ex: 1,15,30"
+            value={form.jours_mois}
+            onChange={(e) => handleChange('jours_mois', e.target.value)}
           />
         </div>
       )}
