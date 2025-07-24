@@ -36,6 +36,7 @@ const Prestataires = lazy(() => import('./pages/Prestataires'));
 const PlanificationCalendrier = lazy(() => import('./pages/PlanificationCalendrier'));
 const ListeExecutionsTournees = lazy(() => import ('./pages/ListeExecutionsTournees'));
 const GestionTournee = lazy(() => import ('./pages/GestionTournee'));
+const TooltipTest = lazy(() => import('./components/ui/TooltipTest'));
 
 
 
@@ -94,6 +95,7 @@ function App() {
                     <Route path="planificationcalendrier" element={<PlanificationCalendrier />} />
                     <Route path="listeExecutionstournees" element={<ListeExecutionsTournees />} />
                     <Route path="gestion-tournee" element={<GestionTournee />} />
+                    <Route path="tooltip-test" element={<TooltipTest />} />
 
                   </Routes>
                 </DashboardLayout>

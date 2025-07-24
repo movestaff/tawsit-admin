@@ -10,6 +10,9 @@ import TransfertTourneeWizard from '../components/TransfertTourneeWizard'
 import ModaleEmbarquements from '../components/ModaleEmbarquements';
 import FormulaireEmploye from '../components/FormulaireEmploye';
 import { fetchEmployeById } from '../lib/api';
+import { CalendarDays, AlertTriangle, Users } from 'lucide-react';
+import { Tooltip} from '../components/ui/tooltip'
+
 
 
 
@@ -105,7 +108,7 @@ const [incidents, setIncidents] = useState<any[]>([]);
       ) : (
         <div className="overflow-x-auto rounded border border-neutral bg-white shadow-card">
           <table className="min-w-full text-sm text-gray-800">
-            <thead>
+           <thead>
               <tr className="bg-secondary text-left font-semibold text-gray-700">
                 <th className="px-3 py-1.5">Tournée</th>
                 <th className="px-3 py-1.5">Conducteur</th>
@@ -113,77 +116,84 @@ const [incidents, setIncidents] = useState<any[]>([]);
                 <th className="px-3 py-1.5">Début</th>
                 <th className="px-3 py-1.5">Fin</th>
                 <th className="px-3 py-1.5">Statut</th>
-                <th className="px-3 py-1.5">Planification</th>
-                <th className="px-3 py-1.5">Incident</th>
+                <th className="px-3 py-1.5">Actions</th>
                 <th className="px-3 py-1.5">Transfert</th>
-                <th className="px-3 py-1.5">Embarquement</th>
               </tr>
             </thead>
-            <tbody>
-              {paginated.map((exec) => (
+                 <tbody>
+                    {paginated.map((exec) => (
+                      <tr key={exec.id} className="border-t hover:bg-secondary/80">
+                        <td className="px-3 py-1.5 whitespace-nowrap">{exec.tournee?.nom ?? '—'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">{exec.conducteur?.display_name ?? '—'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">{exec.date}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">{exec.debut?.slice(11, 16) ?? '—'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">{exec.fin?.slice(11, 16) ?? '—'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">
+                          <Badge className={getStatutColor(exec.statut)}>{exec.statut}</Badge>
+                        </td>
+                        {/* -------- COLONNE ACTIONS -------- */}
+                        <td className="px-3 py-1.5 flex gap-2">
+  {/* Planification */}
+  <Tooltip label="Voir planification">
+    <span className="inline-block">
+      <Button size="sm" variant="ghost"  onClick={() => setOpenPlanifId(exec.id_planification)}>
+        <CalendarDays className="w-4 h-4 text-primary" />
+      </Button>
+    </span>
+  </Tooltip>
+  {/* Incident */}
+  <Tooltip label={Array.isArray(exec.incident) && exec.incident.length > 0 ? "Voir incident(s)" : "Aucun incident"}>
+    <span className="inline-block">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={
+          Array.isArray(exec.incident) && exec.incident.length > 0
+            ? () => { setIncidents(exec.incident); setIncidentOpen(true); }
+            : undefined
+        }
+        disabled={!Array.isArray(exec.incident) || exec.incident.length === 0}
+        tabIndex={-1}
+        type="button"
+      >
+        <AlertTriangle
+          className={`w-4 h-4 ${Array.isArray(exec.incident) && exec.incident.length > 0
+            ? "text-orange-500"
+            : "text-gray-300"
+          }`}
+        />
+      </Button>
+    </span>
+  </Tooltip>
+  {/* Embarquement */}
+  <Tooltip label="Voir embarquements">
+    <span className="inline-block">
+      <Button variant="ghost" size="sm" onClick={() => ouvrirEmbarquements(exec.id)}>
+        <Users className="w-4 h-4" />
+      </Button>
+    </span>
+  </Tooltip>
+</td>
 
-               
-                <tr
-                  key={exec.id}
-                  className="border-t hover:bg-secondary/80"
-                >
-                  <td className="px-3 py-1.5 whitespace-nowrap">{exec.tournee?.nom ?? '—'}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">{exec.conducteur?.display_name ?? '—'}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">{exec.date}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">{exec.debut?.slice(11, 16) ?? '—'}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">{exec.fin?.slice(11, 16) ?? '—'}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">
-                    <Badge className={getStatutColor(exec.statut)}>{exec.statut}</Badge>
-                  </td>
-                  <td className="px-3 py-1.5">
-                    <Button size="sm" variant="ghost" onClick={() => setOpenPlanifId(exec.id_planification)}>
-                      <Eye className="w-4 h-4 mr-1" />
-                    </Button>
-                  </td>
-                 <td className="px-3 py-1.5">
-                      {Array.isArray(exec.incident) && exec.incident.length > 0 ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setIncidents(exec.incident);
-                            setIncidentOpen(true);
-                          }}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                        </Button>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-
-
-
-
-
-                  <td className="px-3 py-1.5">
-                    {exec.statut === 'interrompue' && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          console.log("OBJET EXECUTION PASSE AU WIZARD : ", exec);
-                          setCurrentExecution(exec);
-                          setTransfertOpen(true);
-                        }}
-                      >
-                        Transférer
-                      </Button>
-                    )}
-                  </td>
-
-                   <td>
-                <Button variant="ghost" size="sm" onClick={() => ouvrirEmbarquements(exec.id)}>
-                  <Eye className="w-4 h-4" />
-                </Button>
-              </td>
-                </tr>
-              ))}
-            </tbody>
+                        {/* -------- COLONNE TRANSFERT -------- */}
+                        <td className="px-3 py-1.5">
+                          {exec.statut === 'interrompue' && (
+                            <a
+                              href="#"
+                              className="text-primary underline cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentExecution(exec);
+                                setTransfertOpen(true);
+                              }}
+                            >
+                              transférer la tournée
+                            </a>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
           </table>
 
           <ModaleEmbarquements

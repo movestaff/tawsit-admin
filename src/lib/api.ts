@@ -97,21 +97,20 @@ export async function deleteTournee(id: string) {
 // ================== CONDUCTEURS ==================
 // Liste des conducteurs pour les tournées
 export async function fetchConducteurs() {
-  const res = await fetch(`${API_BASE_URL}/tournees/conducteurs`, {
+  return fetchWithAuth(`${API_BASE_URL}/tournees/conducteurs`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+
 }
 
 export async function fetchConducteurGestion() {
-  const res = await fetch(`${API_BASE_URL}/conducteurs`, {
+  return fetchWithAuth(`${API_BASE_URL}/conducteurs`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  //if (!res.ok) throw new Error(await res.text())
+ // return res.json()
 }
 
 
@@ -168,9 +167,11 @@ export async function retirerAffectationConducteur(id: string) {
 
 // =======================EMPLOYES=================
 export async function fetchEmployes() {
-  const res = await fetch(`${API_BASE_URL}/employes`,{ method: 'GET', headers: getAuthHeaders('application/json') })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  return fetchWithAuth(`${API_BASE_URL}/employes`,{
+     method: 'GET', 
+     headers: getAuthHeaders('application/json') })
+  //if (!res.ok) throw new Error(await res.text())
+  //return res.json()
 }
 export async function ajouterEmploye(employe: any) {
   const res = await fetch(`${API_BASE_URL}/employes`, {
@@ -669,12 +670,12 @@ export async function fetchPositionsConducteurs() {
  * GET /planifications/admin
  */
 export async function fetchPlanifications() {
-  const res = await fetch(`${API_BASE_URL}/planifications`, {
+  return fetchWithAuth(`${API_BASE_URL}/planifications`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  //if (!res.ok) throw new Error(await res.text())
+ // return res.json()
 }
 
 
@@ -968,23 +969,19 @@ export async function ajouterEmployesAuGroupe(payload: { employe_ids: string[], 
 
 
 export async function fetchEmployesGroupe() {
-  const res = await fetch(`${API_BASE_URL}/employes`, {
+  return fetchWithAuth(`${API_BASE_URL}/employes`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
+  })}
+  
 
 //=================================gestion vehicule =============================================
 
 // Liste des véhicules
 export async function fetchVehicules() {
-  const res = await fetch(`${API_BASE_URL}/vehicules`, {
+  return fetchWithAuth(`${API_BASE_URL}/vehicules`, {
     method: 'GET'
     , headers: getAuthHeaders('application/json'),})
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
 }
 
 
@@ -1021,22 +1018,20 @@ export async function deleteVehicule(id: string) {
 
 
 export async function fetchStatutsVehicules() {
-  const res = await fetch(`${API_BASE_URL}/vehicules/statuts`, {
+  return fetchWithAuth(`${API_BASE_URL}/vehicules/statuts`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 
 // Liste des véhicules affectés à un conducteur
 export async function fetchVehiculesAffectes(conducteurId: string) {
-  const res = await fetch(`${API_BASE_URL}/conducteur-vehicule/${conducteurId}`, {
+  return fetchWithAuth(`${API_BASE_URL}/conducteur-vehicule/${conducteurId}`, {
     method: 'GET'
     , headers: getAuthHeaders('application/json'),})
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 
@@ -1069,23 +1064,21 @@ export async function retirerAffectationVehiculeConducteur(id: string) {
 
 
 export async function fetchHistoriqueAffectationsVehicule(vehiculeId: string) {
-  const res = await fetch(`${API_BASE_URL}/conducteur-vehicule/vehicule/${vehiculeId}`, {
+  return fetchWithAuth(`${API_BASE_URL}/conducteur-vehicule/vehicule/${vehiculeId}`, {
     headers: getAuthHeaders(),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 
 
 // ================== CONDUCTEURS DISPONIBLES POUR AFFECTATION ==================
 export async function fetchConducteursDispoPourVehicule() {
-  const res = await fetch(`${API_BASE_URL}/conducteur-vehicule/disponibles`, {
+  return fetchWithAuth(`${API_BASE_URL}/conducteur-vehicule/disponibles`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 // ================== AFFECTER CONDUCTEUR À VÉHICULE ==================
@@ -1107,12 +1100,11 @@ export async function affecterConducteurAVehicule(payload: {
 // ================== CONTRATS PRESTATAIRES ==================
 
 export async function fetchContrats() {
-  const res = await fetch(`${API_BASE_URL}/contrats`, {
+  return fetchWithAuth(`${API_BASE_URL}/contrats`, {
     method: 'GET',
     headers: getAuthHeaders('application/json')
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 export async function createContrat(contrat: any) {
@@ -1194,12 +1186,11 @@ export async function demanderModificationContrat(id: string, payload: { objet: 
 }
 
 export async function fetchVehiculesContrat(contrat_id: string) {
-  const res = await fetch(`${API_BASE_URL}/contrats/${contrat_id}/vehicules`, {
+   return fetchWithAuth(`${API_BASE_URL}/contrats/${contrat_id}/vehicules`, {
     method: 'GET',
     headers: getAuthHeaders('application/json')
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+
 }
 
 export async function affecterVehiculeContrat(payload: { contrat_id: string, vehicule_id: string }) {
@@ -1224,31 +1215,28 @@ export async function retirerVehiculeContrat(contrat_vehicule_id: string) {
 
 
 export async function fetchPrestataires() {
-  const res = await fetch(`${API_BASE_URL}/prestataires`, {
+  return fetchWithAuth(`${API_BASE_URL}/prestataires`, {
     method: 'GET',
     headers: getAuthHeaders('application/json')
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+ 
 }
 
 //========================historique validations contrat =======
 export async function fetchHistoriqueValidations(contratId: string) {
-  const res = await fetch(`${API_BASE_URL}/contrats/${contratId}/historique-validations`, {
+  return fetchWithAuth(`${API_BASE_URL}/contrats/${contratId}/historique-validations`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 export async function fetchRevisionsContrat(contratId: string) {
-  const res = await fetch(`${API_BASE_URL}/contrats/${contratId}/revisions`, {
+  return fetchWithAuth(`${API_BASE_URL}/contrats/${contratId}/revisions`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+
 }
 //====================
 export async function fetchVehiculesParPrestataire(
@@ -1258,23 +1246,19 @@ export async function fetchVehiculesParPrestataire(
   const params = new URLSearchParams()
   if (options.sansContrat) params.append('sansContrat', 'true')
   const url = `${API_BASE_URL}/contrats/prestataires/${prestataire_id}/vehicules?${params.toString()}`
-  const res = await fetch(url, {
+  return fetchWithAuth(url, {
     method: 'GET',
     headers: getAuthHeaders('application/json')
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 
 export async function desactiverContrat(contratId: string) {
-  const res = await fetch(`${API_BASE_URL}/contrats/${contratId}/desactiver`, {
+  return fetchWithAuth(`${API_BASE_URL}/contrats/${contratId}/desactiver`, {
     method: 'PATCH',
     headers: getAuthHeaders('application/json'),
   });
-
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
 }
 
 
@@ -1291,12 +1275,11 @@ export async function reactiverContrat(contratId: string) {
 // ========================gestion services contrats =============================
 
 export async function fetchServicesContrat(contratId: string) {
-  const res = await fetch(`${API_BASE_URL}/services?contrat_id=${contratId}`, {
+  return fetchWithAuth(`${API_BASE_URL}/services?contrat_id=${contratId}`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 export async function ajouterServiceContrat(contratId: string, payload: any) {
@@ -1331,12 +1314,11 @@ export async function retirerServiceContrat(serviceContratId: string) {
 
 
 export async function fetchServices() {
-  const res = await fetch(`${API_BASE_URL}/services/services`, {
+  return fetchWithAuth(`${API_BASE_URL}/services/services`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+ 
 }
 
 
@@ -1353,20 +1335,18 @@ export async function affecterVehiculeService(payload: any) {
 
 // Lister les véhicules d’un service
 export async function getVehiculesParService(serviceId: string) {
-  const res = await fetch(`${API_BASE_URL}/vehicules-service/service/${serviceId}`, {
+  return fetchWithAuth(`${API_BASE_URL}/vehicules-service/service/${serviceId}`, {
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 // Lister les véhicules d’un prestataire
 export async function getVehiculesParPrestataire(prestataireId: string) {
-  const res = await fetch(`${API_BASE_URL}/vehicules-service/prestataire/${prestataireId}`, {
+  return fetchWithAuth(`${API_BASE_URL}/vehicules-service/prestataire/${prestataireId}`, {
     headers: getAuthHeaders('application/json'),
   })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  
 }
 
 // Retirer un véhicule d’un service
@@ -1647,12 +1627,12 @@ export async function deletePrestataire(id: string) {
 // =========================execution tournee==================================
 
 export async function fetchExecutions() {
-  const res = await fetch(`${API_BASE_URL}/executions`, {
+  return fetchWithAuth(`${API_BASE_URL}/executions`, {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  //if (!res.ok) throw new Error(await res.text());
+  //return res.json();
 }
 
 export async function fetchPlanificationById(id: string) {
@@ -1663,7 +1643,7 @@ export async function fetchPlanificationById(id: string) {
       headers: getAuthHeaders('application/json'),
     }
   );
-  if (!res.ok) throw new Error(await res.text());
+ if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
