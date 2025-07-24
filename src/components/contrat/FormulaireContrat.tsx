@@ -22,7 +22,9 @@ type Contrat = {
   alerte_expiration_days?: number
   statut?: string
   statut_validation?: 'brouillon' | 'en_attente' | 'valide' | 'rejete' | 'modification_en_cours'
+  numero_contrat?: string    
   [key: string]: any
+
 }
 type FormulaireContratProps = {
   contrat?: Contrat
@@ -56,6 +58,7 @@ const { profile } = useUserProfile()
       alerte_expiration_days: form.alerte_expiration_days ?? 30,
       statut: form.statut ?? 'actif',
       statut_validation: form.statut_validation ?? 'brouillon',
+      numero_contrat: form.numero_contrat,
     };
 
     try {
@@ -96,6 +99,17 @@ if (form.id) {
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">Numéro du contrat</label>
+            <Input
+              type="text"
+              value={form.numero_contrat || ''}
+              onChange={e => handleChange('numero_contrat', e.target.value)}
+              className="mt-1"
+            />
+          </div>
+
           <div>
             <label className="text-sm font-medium text-gray-700">Prestataire</label>
             <select
@@ -125,18 +139,18 @@ if (form.id) {
 
           
             <div>
-  <label className="text-sm font-medium text-gray-700">Fréquence paiement</label>
-  <select
-    className="w-full border rounded p-2 mt-1"
-    value={form.frequence_paiement || ''}
-    onChange={e => handleChange('frequence_paiement', e.target.value)}
-  >
-    <option value="">-- Sélectionner --</option>
-    <option value="mensuelle">Mensuelle</option>
-    <option value="bimensuelle">Bimensuelle</option>
-    <option value="hebdomadaire">Hebdomadaire</option>
-  </select>
-</div>
+                  <label className="text-sm font-medium text-gray-700">Fréquence paiement</label>
+                  <select
+                    className="w-full border rounded p-2 mt-1"
+                    value={form.frequence_paiement || ''}
+                    onChange={e => handleChange('frequence_paiement', e.target.value)}
+                  >
+                    <option value="">-- Sélectionner --</option>
+                    <option value="mensuelle">Mensuelle</option>
+                    <option value="bimensuelle">Bimensuelle</option>
+                    <option value="hebdomadaire">Hebdomadaire</option>
+                  </select>
+            </div>
 
           
 
@@ -158,68 +172,68 @@ if (form.id) {
           )}
 
 
-{form.id && ['brouillon', 'rejete'].includes(form.statut_validation || '') &&  (
-  <Button variant="outline" onClick={async () => {
-    try {
-      await submitContrat(form.id!)
-      toast.success("Contrat soumis pour approbation")
-      onClose()
-    } catch (err) {
-      toast.error("Erreur lors de la soumission")
-    }
-  }}>
-    Soumettre pour approbation
-  </Button>
-)}
+                {form.id && ['brouillon', 'rejete'].includes(form.statut_validation || '') &&  (
+                  <Button variant="outline" onClick={async () => {
+                    try {
+                      await submitContrat(form.id!)
+                      toast.success("Contrat soumis pour approbation")
+                      onClose()
+                    } catch (err) {
+                      toast.error("Erreur lors de la soumission")
+                    }
+                  }}>
+                    Soumettre pour approbation
+                  </Button>
+                )}
 
-{form.id && form.statut_validation === 'valide' && (
-  <Button variant="outline" onClick={async () => {
-    const objet = prompt("Motif de la demande de modification :")
-    if (!objet) return
+                {form.id && form.statut_validation === 'valide' && (
+                  <Button variant="outline" onClick={async () => {
+                    const objet = prompt("Motif de la demande de modification :")
+                    if (!objet) return
 
-    try {
-      await demanderModificationContrat(form.id!, { objet })
-      toast.success("Demande de modification envoyée")
-      onClose()
-    } catch (err) {
-      toast.error("Erreur lors de la demande de modification")
-    }
-  }}>
-    Demander une modification
-  </Button>
-)}
+                    try {
+                      await demanderModificationContrat(form.id!, { objet })
+                      toast.success("Demande de modification envoyée")
+                      onClose()
+                    } catch (err) {
+                      toast.error("Erreur lors de la demande de modification")
+                    }
+                  }}>
+                    Demander une modification
+                  </Button>
+                )}
 
 
 
-{form.id && profile?.est_approbateur && ['en_attente', 'modification_en_cours'].includes(form.statut_validation || '') && (
-  <>
-    <Button variant="primary" onClick={async () => {
-      try {
-        await validerContrat(form.id!)
-        toast.success("Contrat validé")
-        onClose()
-      } catch {
-        toast.error("Erreur lors de la validation")
-      }
-    }}>
-      Valider le contrat
-    </Button>
+                {form.id && profile?.est_approbateur && ['en_attente', 'modification_en_cours'].includes(form.statut_validation || '') && (
+                  <>
+                    <Button variant="primary" onClick={async () => {
+                      try {
+                        await validerContrat(form.id!)
+                        toast.success("Contrat validé")
+                        onClose()
+                      } catch {
+                        toast.error("Erreur lors de la validation")
+                      }
+                    }}>
+                      Valider le contrat
+                    </Button>
 
-    <Button variant="destructive" onClick={async () => {
-      const commentaire = prompt("Motif du rejet :")
-      if (!commentaire) return
-      try {
-        await rejeterContrat(form.id!, commentaire)
-        toast.success("Contrat rejeté")
-        onClose()
-      } catch {
-        toast.error("Erreur lors du rejet")
-      }
-    }}>
-      Rejeter
-    </Button>
-  </>
-)}
+                    <Button variant="destructive" onClick={async () => {
+                      const commentaire = prompt("Motif du rejet :")
+                      if (!commentaire) return
+                      try {
+                        await rejeterContrat(form.id!, commentaire)
+                        toast.success("Contrat rejeté")
+                        onClose()
+                      } catch {
+                        toast.error("Erreur lors du rejet")
+                      }
+                    }}>
+                      Rejeter
+                    </Button>
+                  </>
+                )}
 
 
 
