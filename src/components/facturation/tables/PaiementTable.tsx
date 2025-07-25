@@ -60,7 +60,7 @@ export default function PaiementTable({
            {p.statut === 'effectué' && (
                 <BoutonAnnulerPaiement paiementId={p.id} />
                 )}
-</td>
+            </td>
 
             </tr>
           ))}

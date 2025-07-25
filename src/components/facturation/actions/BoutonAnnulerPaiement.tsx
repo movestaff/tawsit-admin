@@ -17,6 +17,10 @@ export default function BoutonAnnulerPaiement({ paiementId, disabled }: Props) {
   const [loading, setLoading] = useState(false)
 
   const handleClick = async () => {
+    if (!confirm('Voulez-vous vraiment annuler ce paiement ? Cette action est irréversible.')) {
+    return
+    }
+
     if (!paiementId) {
       alert('Paiement ID manquant.')
       return

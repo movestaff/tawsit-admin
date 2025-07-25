@@ -14,9 +14,18 @@ export default function BoutonCreationPaiement({
 }: Props) {
   const [loading, setLoading] = useState(false)
   const creerPaiement = useFacturationStore(s => s.creerPaiement)
-
+   const montants = useFacturationStore(s => s.montants)
+  
   const handleClick = async () => {
-    if (!confirm('Créer un paiement pour cette période (tous montants doivent être validés) ?')) {
+
+    const tousValides = montants.every(m => m.statut === 'valide')
+
+ if (!tousValides) {
+      alert("Tous les montants doivent être validés avant de créer un paiement.")
+      return
+    }
+
+    if (!confirm('Créer un paiement pour cette période ?')) {
       return
     }
 

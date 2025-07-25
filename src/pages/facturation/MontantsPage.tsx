@@ -63,7 +63,7 @@ export default function MontantsPage({ periodeId }: MontantsPageProps) {
             />
               <BoutonCreationPaiement
                 periodeId={periodeId}
-                disabled={!canCreatePayment}
+                //disabled={!canCreatePayment}
                 
               />
           </div>

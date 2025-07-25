@@ -1,7 +1,5 @@
 // src/components/VehiculeSelector.tsx
 
-// src/components/VehiculeSelector.tsx
-
 import { useEffect, useState } from 'react';
 import {
   Paper,

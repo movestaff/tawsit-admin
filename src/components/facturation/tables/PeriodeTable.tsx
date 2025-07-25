@@ -50,7 +50,7 @@ export default function PeriodeTable({
                 <StatusBadge statut={p.statut} />
               </td>
               <td className="px-4 py-2 flex flex-wrap gap-2">
-                {p.statut === 'ouverte' && (
+                {['ouverte', 'calculée'].includes(p.statut) && (
                   <BoutonCalculMontants periodeId={p.id} />
                 )}
                 {p.statut === 'payée' && (
