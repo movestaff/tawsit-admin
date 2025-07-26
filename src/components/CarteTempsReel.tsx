@@ -11,7 +11,7 @@ interface Props {
 
 const CarteTempsReel: React.FC<Props> = ({ conducteurPosition, pointsArret, polyline }) => {
   const iconBus = new L.Icon({
-    iconUrl: '/icons/bus-icon.png', // remplace par ton icône
+    iconUrl: '/icons/bus-icon.png', 
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   })
