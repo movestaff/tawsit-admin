@@ -6,13 +6,13 @@ import { fetchTournees, fetchPositionsConducteurs } from '../lib/api'
 import { fetchPointsArretParTournee } from '../lib/api'
 
 const conducteurIcon = new L.Icon({
-  iconUrl: '/bus-icon.png',
+  iconUrl: 'icons/bus-icon.png',
   iconSize: [32, 32],
   iconAnchor: [16, 32],
 })
 
 const conducteurExcèsIcon = new L.Icon({
-  iconUrl: '/bus-icon-alert.png', 
+  iconUrl: 'icons/bus-icon-alert.png', 
   iconSize: [32, 32],
   iconAnchor: [16, 32],
 })

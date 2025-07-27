@@ -11,10 +11,16 @@ interface Props {
 
 const CarteTempsReel: React.FC<Props> = ({ conducteurPosition, pointsArret, polyline }) => {
   const iconBus = new L.Icon({
-    iconUrl: '/icons/bus-icon.png', 
+    iconUrl: '/icons/bus-icon.png', // remplace par ton icône
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   })
+
+  const iconArret = new L.Icon({
+  iconUrl: '/icons/position.png', // ou une autre image pour les arrêts
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+})
 
   return (
     <MapContainer center={conducteurPosition} zoom={14} style={{ height: '600px', width: '100%' }}>
@@ -23,10 +29,10 @@ const CarteTempsReel: React.FC<Props> = ({ conducteurPosition, pointsArret, poly
         attribution="&copy; OpenStreetMap contributors"
       />
 
-      <Marker position={conducteurPosition} icon={iconBus} />
+      <Marker position={conducteurPosition} icon={iconBus}  />
 
       {pointsArret.map((pos, i) => (
-        <Marker key={i} position={pos} />
+        <Marker key={i} position={pos} icon={iconArret} />
       ))}
 
       {polyline && <Polyline positions={polyline} color="green" />}
