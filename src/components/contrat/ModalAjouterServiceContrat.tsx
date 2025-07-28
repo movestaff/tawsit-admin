@@ -19,7 +19,9 @@ export default function ModalAjouterServiceContrat({ contratId, open, onClose, o
     service_id: '',
     tarif_unitaire: '',
     unite_tarif: '',
-    plafond_mensuel: ''
+    plafond_mensuel: '',
+    km_step: '',                // <- ajout
+    tarif_unitaire_step: '' 
   })
 
   useEffect(() => {
@@ -31,14 +33,18 @@ export default function ModalAjouterServiceContrat({ contratId, open, onClose, o
           service_id: serviceToEdit.service_id,
           tarif_unitaire: serviceToEdit.tarif_unitaire?.toString() || '',
           unite_tarif: serviceToEdit.unite_tarif || '',
-          plafond_mensuel: serviceToEdit.plafond_mensuel?.toString() || ''
+          plafond_mensuel: serviceToEdit.plafond_mensuel?.toString() || '',
+          km_step: serviceToEdit.km_step?.toString() || '',
+          tarif_unitaire_step: serviceToEdit.tarif_unitaire_step?.toString() || ''
         })
       } else {
         setForm({
           service_id: '',
           tarif_unitaire: '',
           unite_tarif: '',
-          plafond_mensuel: ''
+          plafond_mensuel: '',
+          km_step: '',
+          tarif_unitaire_step: ''
         })
       }
     }
@@ -65,7 +71,9 @@ export default function ModalAjouterServiceContrat({ contratId, open, onClose, o
     const payload = {
       ...form,
       tarif_unitaire: parseFloat(form.tarif_unitaire),
-      plafond_mensuel: form.plafond_mensuel ? parseFloat(form.plafond_mensuel) : null
+      plafond_mensuel: form.plafond_mensuel ? parseFloat(form.plafond_mensuel) : null,
+      km_step: form.km_step ? parseFloat(form.km_step) : null,
+      tarif_unitaire_step: form.tarif_unitaire_step ? parseFloat(form.tarif_unitaire_step) : null
     }
 
     if (serviceToEdit?.id) {
@@ -80,12 +88,16 @@ export default function ModalAjouterServiceContrat({ contratId, open, onClose, o
     onClose()
   }
 
+  const selectedService = servicesDispo.find(s => s.id === form.service_id)
+  const isOccasionnelParKm = selectedService?.code === 'OCCASIONNEL_PAR_KM'
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{serviceToEdit ? 'Modifier le service' : 'Ajouter un service'}</DialogTitle>
         </DialogHeader>
+
 
         <div className="space-y-4">
           <div>
@@ -106,17 +118,48 @@ export default function ModalAjouterServiceContrat({ contratId, open, onClose, o
             </select>
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-gray-700">Tarif unitaire</label>
-            <Input
-              name="tarif_unitaire"
-              type="number"
-              value={form.tarif_unitaire}
-              onChange={handleChange}
-              placeholder="Tarif unitaire"
-              className="mt-1"
-            />
-          </div>
+          {isOccasionnelParKm && (
+  <div className="flex gap-4">
+    <div>
+      <label className="text-sm font-medium text-gray-700">Pas (km)</label>
+      <Input
+        name="km_step"
+        type="number"
+        value={form.km_step}
+        onChange={handleChange}
+        placeholder="Ex: 20"
+        className="mt-1"
+        min={1}
+      />
+    </div>
+    <div>
+      <label className="text-sm font-medium text-gray-700">Tarif par pas</label>
+      <Input
+        name="tarif_unitaire_step"
+        type="number"
+        value={form.tarif_unitaire_step}
+        onChange={handleChange}
+        placeholder="Ex: 20"
+        className="mt-1"
+        min={0}
+      />
+    </div>
+  </div>
+)}
+
+        {!isOccasionnelParKm && (
+            <div>
+              <label className="text-sm font-medium text-gray-700">Tarif unitaire</label>
+              <Input
+                name="tarif_unitaire"
+                type="number"
+                value={form.tarif_unitaire}
+                onChange={handleChange}
+                placeholder="Tarif unitaire"
+                className="mt-1"
+              />
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-medium text-gray-700">Unité de tarif</label>
