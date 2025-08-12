@@ -11,6 +11,7 @@ import { ModalHistoriqueValidation } from '../components/contrat/ModalHistorique
 import { ModalRevisionsContrat } from '../components/contrat/ModalRevisionsContrat'
 import { Tooltip } from 'react-tooltip'
 import ModalDocumentsContrat from '../components/contrat/ModalDocumentsContrat'
+ 
 
 type Contrat = {
   id: string
@@ -22,6 +23,7 @@ type Contrat = {
   statut: string
   statut_validation?: "brouillon" | "en_attente" | "valide" | "rejete" | "modification_en_cours"
   numero_contrat?: string  
+   alerte_expiration_days?: number 
 }
 
 type Prestataire = {
@@ -42,13 +44,32 @@ export default function Contrats() {
   const [contratPourDocuments, setContratPourDocuments] = useState<Contrat | null>(null)
   const [documentsModalOpen, setDocumentsModalOpen] = useState(false)
 
+  
+
   // Pagination
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
+  const joursRestants = (dateISO: string) =>
+  Math.ceil((new Date(dateISO).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
   const chargerContrats = async () => {
     const data = await fetchContrats()
     setContrats(data)
+
+     // ✅ notifications expiration
+  data.forEach((c: Contrat) => {
+    if (!c?.date_fin) return
+    const left = joursRestants(c.date_fin)
+    const seuil = c.alerte_expiration_days ?? 0
+    if (Number.isFinite(left) && left >= 0 && left <= seuil) {
+      // on évite les doublons de toast avec un id stable
+      toast.warn(
+        `Le contrat ${c.numero_contrat || c.id.slice(0, 8)} expire dans ${left} jour(s).`,
+        { toastId: `exp-${c.id}` }
+      )
+    }
+  })
   }
 
   const chargerPrestataires = async () => {
@@ -142,7 +163,31 @@ export default function Contrats() {
                   <td className="px-4 py-2">{contrat.numero_contrat || '—'}</td>
                   <td className="px-4 py-2">{prestataire?.nom || '—'}</td>
                   <td className="px-4 py-2">{contrat.date_debut}</td>
-                  <td className="px-4 py-2">{contrat.date_fin}</td>
+
+                  <td className="px-4 py-2">
+  {contrat.date_fin}
+  {(() => {
+    const left = joursRestants(contrat.date_fin)
+    const seuil = contrat.alerte_expiration_days ?? 0
+    if (Number.isFinite(left)) {
+      if (left < 0) {
+        return (
+          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+            Expiré
+          </span>
+        )
+      }
+      if (left <= seuil) {
+        return (
+          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+            J-{left}
+          </span>
+        )
+      }
+    }
+    return null
+  })()}
+</td>
                   <td className="px-4 py-2">{contrat.montant_total}</td>
                   <td className="px-4 py-2">{contrat.frequence_paiement}</td>
                   <td className="px-4 py-2">{contrat.statut}</td>
