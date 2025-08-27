@@ -84,6 +84,69 @@ export default function AutoPlanificationAssistant() {
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const [planificationType, setPlanificationType] = useState<'depart' | 'retour'>('depart');
 
+  // 🆕 Helpers d'édition (mutations immuables sur previewResult)
+const updateClusterAt = (groupeId: string, clusterIdx: number, patch: any) => {
+  setPreviewResult((prev: any) => {
+    if (!prev?.clustersByGroupe?.[groupeId]) return prev;
+    const next = { ...prev };
+    next.clustersByGroupe = { ...prev.clustersByGroupe };
+    const arr = [...prev.clustersByGroupe[groupeId]];
+    arr[clusterIdx] = { ...arr[clusterIdx], ...patch };
+    next.clustersByGroupe[groupeId] = arr;
+    return next;
+  });
+};
+
+// 🆕 1) Déplacer un marker (maj lat/lng)
+const handleMoveMarker = (groupeId: string, clusterIdx: number, lat: number, lng: number) => {
+  updateClusterAt(groupeId, clusterIdx, { latitude: lat, longitude: lng });
+};
+
+// 🆕 2) Modifier l'ordre (1-based) + renumérotation propre
+const handleSetOrdre = (groupeId: string, clusterIdx: number, newOrdre: number) => {
+  setPreviewResult((prev: any) => {
+    const arr = prev?.clustersByGroupe?.[groupeId];
+    if (!arr) return prev;
+
+    // copie
+    const next = { ...prev, clustersByGroupe: { ...prev.clustersByGroupe } };
+    const cloned = arr.map((c: any) => ({ ...c }));
+
+    // borne 1..N
+    const N = cloned.length;
+    const target = Math.max(1, Math.min(N, Math.trunc(newOrdre)));
+
+    // récupérer l’ordre actuel
+    const current = cloned[clusterIdx]?.ordre ?? (clusterIdx + 1);
+
+    if (target === current) return prev;
+
+    // décaler les autres
+    cloned.forEach((c: any, i: number) => {
+      const o = c.ordre ?? (i + 1);
+      if (i === clusterIdx) return;
+      if (o >= target && o < current) c.ordre = o + 1;
+      if (o <= target && o > current) c.ordre = o - 1;
+    });
+
+    // positionner le nouveau
+    cloned[clusterIdx].ordre = target;
+
+    // normaliser 1..N (sécurité)
+    const sorted = cloned
+      .sort((a: any, b: any) => (a.ordre ?? 0) - (b.ordre ?? 0))
+      .map((c: any, i: number) => ({ ...c, ordre: i + 1 }));
+
+    next.clustersByGroupe[groupeId] = sorted;
+    return next;
+  });
+};
+
+// 🆕 3) Modifier les employés affectés (tableau d'IDs)
+const handleEditEmployes = (groupeId: string, clusterIdx: number, employeIds: string[]) => {
+  updateClusterAt(groupeId, clusterIdx, { employes: employeIds });
+};
+
   /** ✅ Nouvelle étape : filtrer véhicules disponibles */
   const handleFetchVehiculesDisponibles = async () => {
     if (!selectedGroupes.length || !dateReference) {
@@ -307,7 +370,13 @@ export default function AutoPlanificationAssistant() {
                 <Typography variant="h6" gutterBottom>
                   🗺️ Carte des Arrêts Prévisionnels
                 </Typography>
-                <MapPreviewStep previewResult={previewResult} />
+                <MapPreviewStep
+                  previewResult={previewResult}
+                  // 🆕 callbacks d'édition
+                  onMoveMarker={handleMoveMarker}
+                  onSetOrdre={handleSetOrdre}
+                  onEditEmployes={handleEditEmployes}
+/>
               </>
             )}
 

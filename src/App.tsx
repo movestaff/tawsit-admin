@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 
 
+
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SelectSocietePage = lazy(() => import('./pages/SelectSocietePage'));
@@ -37,6 +38,7 @@ const PlanificationCalendrier = lazy(() => import('./pages/PlanificationCalendri
 const ListeExecutionsTournees = lazy(() => import ('./pages/ListeExecutionsTournees'));
 const GestionTournee = lazy(() => import ('./pages/GestionTournee'));
 const TooltipTest = lazy(() => import('./components/ui/TooltipTest'));
+const IAPropositions = lazy(() => import('./pages/IAPropositions'));
 
 
 
@@ -96,6 +98,7 @@ function App() {
                     <Route path="listeExecutionstournees" element={<ListeExecutionsTournees />} />
                     <Route path="gestion-tournee" element={<GestionTournee />} />
                     <Route path="tooltip-test" element={<TooltipTest />} />
+                    <Route path="/ia/propositions" element={<IAPropositions />} />
 
                   </Routes>
                 </DashboardLayout>

@@ -17,6 +17,13 @@ import L from 'leaflet';
 import BusinessIcon from '@mui/icons-material/Business';
 
 import 'leaflet/dist/leaflet.css';
+import {
+  Select, MenuItem, FormControl, InputLabel,
+  FormControlLabel, Checkbox, Chip
+} from '@mui/material';
+import { useMemo } from 'react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
 
 // Icônes Leaflet fix
 L.Icon.Default.mergeOptions({
@@ -34,6 +41,9 @@ const customIcon = L.icon({
   shadowSize: [41, 41],
   shadowAnchor: [12, 41],
 });
+
+
+
 type Employe = {
   ID: string;
   nom: string;
@@ -62,9 +72,13 @@ type PreviewResult = {
 
 type Props = {
   previewResult: PreviewResult;
+    // 🆕 callbacks (fournis par le parent)
+  onMoveMarker?: (groupeId: string, clusterIdx: number, lat: number, lng: number) => void;
+  onSetOrdre?: (groupeId: string, clusterIdx: number, newOrdre: number) => void;
+  onEditEmployes?: (groupeId: string, clusterIdx: number, employeIds: string[]) => void;
 };
 
-  const MapPreviewStep: React.FC<Props> = ({ previewResult }) => {
+  const MapPreviewStep: React.FC<Props> = ({ previewResult, onMoveMarker, onSetOrdre, onEditEmployes  }) => {
 
      if (!previewResult || !previewResult.groupes) {
     return (
@@ -77,6 +91,22 @@ type Props = {
   }
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState<any | null>(null);
+
+  const theme = useMemo(
+  () =>
+    createTheme({
+      palette: {
+        primary: {
+          main: '#228B22',
+          dark: '#1d741d',
+          contrastText: '#ffffff',
+        },
+      },
+    }),
+  []
+);
+
+
 
   // Stats
   const totalEmployes = Object.values(previewResult.employesByGroupe || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
@@ -104,9 +134,19 @@ const totalVehiculesUtilises = vehiculesUtilisesSet.size;
 
   // Ouvrir le détail
   const handleOpenDialog = (cluster: any, groupe: any) => {
-    setSelectedCluster({ ...cluster, groupe });
-    setOpenDialog(true);
-  };
+  setSelectedCluster({ ...cluster, groupe });
+  // initialiser les IDs (cas départ: c.employes = IDs)
+  const ids = Array.isArray(cluster.employes)
+    ? cluster.employes.map((x: any) => (typeof x === 'string' ? x : x?.ID)).filter(Boolean)
+    : [];
+  setEditedEmployeIds(ids);
+ // reset recherche/filtre à l’ouverture
+  setQ('');
+  resetFilters();
+  setOpenDialog(true);
+};
+
+
   const vehiculesByIndex = (previewResult.vehiculesDisponibles ?? []).reduce((acc, v, idx) => {
   acc[idx] = v;
   return acc;
@@ -116,13 +156,214 @@ const totalVehiculesUtilises = vehiculesUtilisesSet.size;
   const [filterSite, setFilterSite] = useState('');
   const [filterVehicule, setFilterVehicule] = useState('');
 
+  const [editedEmployeIds, setEditedEmployeIds] = useState<string[]>([]);
+
+  // 🆕 Barre de recherche + facettes
+const [q, setQ] = useState('');
+const [filters, setFilters] = useState<{ ville: string; service: string; departement: string; actif: boolean }>({
+  ville: '',
+  service: '',
+  departement: '',
+  actif: true,
+});
+
+
+// 🆕 paramètres de sélection de masse
+const [radiusM, setRadiusM] = useState<number>(300); // rayon en mètres (défaut 300m)
+const [topK, setTopK] = useState<number>(10);        // K plus proches (défaut 10)
+
+
+// 🆕 Sélection polygone (carte)
+const [polygonMode, setPolygonMode] = useState(false);
+const [polygonActiveGroupeId, setPolygonActiveGroupeId] = useState<string | null>(null);
+
+// 🆕 point-in-polygon (ray casting) — lat/lng en [ [lat,lng], ... ]
+const pointInPolygon = (lat: number, lng: number, poly: [number, number][]) => {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][1], yi = poly[i][0];
+    const xj = poly[j][1], yj = poly[j][0];
+    const intersect = ((yi > lat) !== (yj > lat)) &&
+      (lng < ((xj - xi) * (lat - yi)) / (yj - yi + 1e-12) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+};
+
+
+
+// 🆕 Helpers sélection (basés sur la liste filtrée actuelle dans le Dialog)
+const selectAllFiltered = () => {
+  const ids = filteredEmployees.map((e: any) => e.ID);
+  setEditedEmployeIds((prev) => Array.from(new Set([...prev, ...ids])));
+};
+
+const selectNoneFiltered = () => {
+  const filteredIds = new Set(filteredEmployees.map((e: any) => e.ID));
+  setEditedEmployeIds((prev) => prev.filter((id) => !filteredIds.has(id)));
+};
+
+const invertFiltered = () => {
+  const filteredIds = new Set(filteredEmployees.map((e: any) => e.ID));
+  setEditedEmployeIds((prev) => {
+    const current = new Set(prev);
+    const toggled: string[] = [];
+    // Ajoute ceux non cochés, retire ceux cochés… parmi le filtré
+    filteredEmployees.forEach((e: any) => {
+      if (current.has(e.ID)) {
+        // retire
+        current.delete(e.ID);
+      } else {
+        // ajoute
+        toggled.push(e.ID);
+      }
+    });
+    return Array.from(new Set([...Array.from(current), ...toggled]));
+  });
+};
+
+
+// 🆕 utilitaire distance (Haversine) en mètres
+const haversine = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const R = 6371000;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+};
+
+// 🆕 helper: retrouver l'index du cluster actuellement ouvert (mêmes critères que ton "Enregistrer")
+const getSelectedClusterIndex = () => {
+  if (!selectedCluster) return -1;
+  const arr = previewResult.clustersByGroupe?.[selectedCluster.groupe.id] ?? [];
+  return arr.findIndex(
+    (c: any) =>
+      c.latitude === selectedCluster.latitude &&
+      c.longitude === selectedCluster.longitude &&
+      c.ordre === selectedCluster.ordre
+  );
+};
+
+
+
+// 🆕 3.1 Sélectionner tous les employés filtrés (facettes + recherche)
+const selectFilteredForCurrent = () => {
+  if (!selectedCluster) return;
+  const idx = getSelectedClusterIndex();
+  if (idx < 0) return;
+  const ids = filteredEmployees.map((e: any) => e.ID);
+  onEditEmployes?.(selectedCluster.groupe.id, idx, ids);
+  setEditedEmployeIds(ids);
+};
+
+// 🆕 3.2 Sélection par rayon autour du marker du cluster
+const selectByRadiusForCurrent = () => {
+  if (!selectedCluster) return;
+  const idx = getSelectedClusterIndex();
+  if (idx < 0) return;
+
+  const { latitude: clat, longitude: clng } = selectedCluster;
+  const all = previewResult.employesByGroupe?.[selectedCluster.groupe.id] ?? [];
+
+  const ids = all
+    .filter((e: any) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude))
+    .filter((e: any) => haversine(clat, clng, e.latitude, e.longitude) <= radiusM)
+    .map((e: any) => e.ID);
+
+  onEditEmployes?.(selectedCluster.groupe.id, idx, ids);
+  setEditedEmployeIds(ids);
+};
+
+// 🆕 3.3 Top-K plus proches du marker
+const selectTopKNearestForCurrent = () => {
+  if (!selectedCluster) return;
+  const idx = getSelectedClusterIndex();
+  if (idx < 0) return;
+
+  const { latitude: clat, longitude: clng } = selectedCluster;
+  const all = (previewResult.employesByGroupe?.[selectedCluster.groupe.id] ?? []).filter(
+    (e: any) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude)
+  );
+
+  const ids = all
+    .map((e: any) => ({
+      id: e.ID,
+      d: haversine(clat, clng, e.latitude, e.longitude),
+    }))
+    .sort((a: any, b: any) => a.d - b.d)
+    .slice(0, Math.max(0, Math.trunc(topK)))
+    .map((x: any) => x.id);
+
+  onEditEmployes?.(selectedCluster.groupe.id, idx, ids);
+  setEditedEmployeIds(ids);
+};
+
+
+
+
+
+// 🆕 Liste d'employés du groupe courant (selon le cluster ouvert)
+const currentEmployees = useMemo(() => {
+  if (!selectedCluster) return [] as any[];
+  return previewResult.employesByGroupe?.[selectedCluster.groupe.id] ?? [];
+}, [previewResult, selectedCluster]);
+
+// 🆕 Valeurs uniques pour facettes
+const facetOptions = useMemo(() => {
+  const villes = new Set<string>();
+  const services = new Set<string>();
+  const departements = new Set<string>();
+  for (const emp of currentEmployees) {
+    if (emp.ville) villes.add(emp.ville);
+    if (emp.service) services.add(emp.service);
+    if (emp.departement) departements.add(emp.departement);
+  }
+  return {
+    villes: Array.from(villes).sort(),
+    services: Array.from(services).sort(),
+    departements: Array.from(departements).sort(),
+  };
+}, [currentEmployees]);
+
+// 🆕 Filtrage combiné
+const filteredEmployees = useMemo(() => {
+  const qLower = q.trim().toLowerCase();
+  return currentEmployees.filter((emp: any) => {
+    const okVille = !filters.ville || emp.ville === filters.ville;
+    const okService = !filters.service || emp.service === filters.service;
+    const okDept = !filters.departement || emp.departement === filters.departement;
+    const okActif = filters.actif ? emp.actif !== false : true;
+    const okSearch =
+      !qLower ||
+      (emp.nom?.toLowerCase().includes(qLower)) ||
+      (emp.prenom?.toLowerCase().includes(qLower)) ||
+      (emp.matricule?.toLowerCase().includes(qLower)) ||
+      (emp.email?.toLowerCase().includes(qLower));
+    return okVille && okService && okDept && okActif && okSearch;
+  });
+}, [currentEmployees, q, filters]);
+
+// 🆕 Aides rapides
+const resetFilters = () => setFilters({ ville: '', service: '', departement: '', actif: true });
+
+
+//*****************************************************************************.. */
+//**************************************************************************** */
+
   return (
+
+    <ThemeProvider theme={theme}>
+    <CssBaseline />
+
     <Box p={2}>
       {/* Carte */}
       <Card sx={{ mb: 2 }}>
         <CardContent>
          
-          <MapContainer center={[avgLat, avgLng]} zoom={12} style={{ height: '400px', width: '100%' }}>
+          <MapContainer center={[avgLat, avgLng]} zoom={12} style={{ height: '500px', width: '100%' }}>
   <TileLayer
     attribution='&copy; OpenStreetMap contributors'
     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -134,23 +375,37 @@ const totalVehiculesUtilises = vehiculesUtilisesSet.size;
       .filter(c => !c.retourFlexible)
       .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
       .map((c, idx) => (
-        <Marker
-          key={`${groupe.id}-${idx}`}
-          position={[c.latitude, c.longitude]}
-          icon={customIcon}
-        >
-          <Popup>
-            <Typography variant="subtitle2">{groupe.nom}</Typography>
-            <Typography variant="body2">Cluster #{idx + 1}</Typography>
-            <Typography variant="body2">Ordre : {c.ordre ?? '-'}</Typography>
-            <Typography variant="body2">
-              Véhicule: {vehiculesByIndex[c.vehicule]?.immatriculation ?? 'N/A'}
-            </Typography>
-            <Typography variant="body2">Distance max : {c.distance_max_m ?? 'N/A'} m</Typography>
-            <Typography variant="body2">Valide : {c.valide ? '✅' : '❌'}</Typography>
-            <Typography variant="body2">Nb Employés : {c.employes?.length ?? 0}</Typography>
-          </Popup>
-        </Marker>
+       <Marker
+  key={`${groupe.id}-${idx}`}
+  position={[c.latitude, c.longitude]}
+  icon={customIcon}
+  draggable // 🆕 rendre le point editable
+  eventHandlers={{
+    dragend: (e) => {
+      const m = e.target;
+      const { lat, lng } = m.getLatLng();
+      onMoveMarker?.(groupe.id, idx, lat, lng); // 🆕 remontée parent
+    }
+  }}
+>
+  <Popup>
+    <Typography variant="subtitle2">{groupe.nom}</Typography>
+    <Typography variant="body2">Cluster #{idx + 1}</Typography>
+    <Typography variant="body2">Ordre : {c.ordre ?? '-'}</Typography>
+    <Typography variant="body2">
+      Véhicule: {vehiculesByIndex[c.vehicule]?.immatriculation ?? 'N/A'}
+    </Typography>
+    <Typography variant="body2">Distance max : {c.distance_max_m ?? 'N/A'} m</Typography>
+    <Typography variant="body2">Valide : {c.valide ? '✅' : '❌'}</Typography>
+    <Typography variant="body2">Nb Employés : {c.employes?.length ?? 0}</Typography>
+    {/* 🆕 Actions rapides */}
+    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+      <Button size="small" variant="outlined" onClick={() => onSetOrdre?.(groupe.id, idx, (c.ordre ?? (idx+1)) - 1)}>▲ ordre</Button>
+      <Button size="small" variant="outlined" onClick={() => onSetOrdre?.(groupe.id, idx, (c.ordre ?? (idx+1)) + 1)}>▼ ordre</Button>
+      <Button size="small" variant="outlined" onClick={() => handleOpenDialog(c, groupe)}>Éditer employés</Button>
+    </Box>
+  </Popup>
+</Marker>
       ))
   )}
 
@@ -308,9 +563,15 @@ const totalVehiculesUtilises = vehiculesUtilisesSet.size;
         🚐 Retour flexible : {cluster.employes?.length ?? 0} employés affectés
       </TableCell>
       <TableCell>
-        <Button variant="outlined" size="small" onClick={() => handleOpenDialog(cluster, groupe)}>
-          Détails
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+    <Button variant="outlined" size="small" onClick={() => handleOpenDialog(cluster, groupe)}>
+      Détails
+    </Button>
+    {/* 🆕 actions ordre */}
+    <Button variant="outlined" size="small" onClick={() => onSetOrdre?.(groupe.id, idx, (cluster.ordre ?? (idx+1)) - 1)}>▲</Button>
+    <Button variant="outlined" size="small" onClick={() => onSetOrdre?.(groupe.id, idx, (cluster.ordre ?? (idx+1)) + 1)}>▼</Button>
+  </Box>
+        
       </TableCell>
     </>
   ) : (
@@ -343,7 +604,16 @@ const totalVehiculesUtilises = vehiculesUtilisesSet.size;
       </Card>
 
       {/* Dialog détails employés */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+  open={openDialog}
+  onClose={() => setOpenDialog(false)}
+  maxWidth="md"                  // ← largeur MUI ~ 900px
+  fullWidth
+  PaperProps={{
+    sx: { width: '72vw', maxWidth: 980, maxHeight: '88vh' } // ← borne responsive + hauteur
+  }}
+>
+
         <DialogTitle>
           Détails des employés
           <IconButton
@@ -354,7 +624,9 @@ const totalVehiculesUtilises = vehiculesUtilisesSet.size;
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ px: 3, py: 2 }}>
+
+           
           {selectedCluster && (
             <>
               <Typography variant="subtitle1" gutterBottom>
@@ -369,42 +641,211 @@ const totalVehiculesUtilises = vehiculesUtilisesSet.size;
               <Typography variant="body2" gutterBottom>
                 Valide : {selectedCluster.valide ? '✅' : '❌'}
               </Typography>
-              <Typography variant="h6" gutterBottom>
-                Employés affectés
-              </Typography>
-              <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
-               <ul>
-  {(selectedCluster.employes || []).map((emp: any, index: number) => {
-    // Cas retourFlexible : c'est déjà l'objet complet
-    if (selectedCluster.retourFlexible) {
-      return (
-        <li key={emp.ID ?? index}>
-          {emp.matricule ?? ''} - {emp.nom} {emp.prenom} ({emp.email ?? ''}) ({emp.telephone ?? ''})
-        </li>
-      );
-    }
+              
+<Typography variant="h6" gutterBottom>Employés affectés</Typography>
 
-    // Cas DEPART : ids simples -> lookup
-    const employe = Object.values(previewResult.employesByGroupe || {})
-      .flat()
-      .find((e): e is Employe => (e as Employe).ID === emp);
+{/* Filtres : pleine largeur, responsive */}
+<Box
+  sx={{
+    width: '100%',
+    display: 'grid',
+    gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr 1fr auto' },
+    gap: 1,
+    mb: 1,
+    alignItems: 'center',
+  }}
+>
+  <TextField
+    label="Rechercher (nom, matricule, email)"
+    size="small"
+    value={q}
+    onChange={(e) => setQ(e.target.value)}
+    fullWidth
+    InputLabelProps={{ shrink: true }}
+  />
 
+  <FormControl size="small" fullWidth>
+    <InputLabel shrink>Ville</InputLabel>
+    <Select
+      label="Ville"
+      value={filters.ville}
+      onChange={(e) => setFilters((f) => ({ ...f, ville: e.target.value as string }))}
+      displayEmpty
+    >
+      <MenuItem value=""><em>Toutes</em></MenuItem>
+      {facetOptions.villes.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+    </Select>
+  </FormControl>
+
+  <FormControl size="small" fullWidth>
+    <InputLabel shrink>Service</InputLabel>
+    <Select
+      label="Service"
+      value={filters.service}
+      onChange={(e) => setFilters((f) => ({ ...f, service: e.target.value as string }))}
+      displayEmpty
+    >
+      <MenuItem value=""><em>Tous</em></MenuItem>
+      {facetOptions.services.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+    </Select>
+  </FormControl>
+
+  <FormControl size="small" fullWidth>
+    <InputLabel shrink>Département</InputLabel>
+    <Select
+      label="Département"
+      value={filters.departement}
+      onChange={(e) => setFilters((f) => ({ ...f, departement: e.target.value as string }))}
+      displayEmpty
+    >
+      <MenuItem value=""><em>Tous</em></MenuItem>
+      {facetOptions.departements.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+    </Select>
+  </FormControl>
+
+  <Box sx={{ display: 'flex', alignItems: 'center', pl: { xs: 0, md: 1 } }}>
+    <FormControlLabel
+      control={
+        <Checkbox
+          checked={filters.actif}
+          onChange={(e) => setFilters((f) => ({ ...f, actif: e.target.checked }))}
+        />
+      }
+      label="Actifs"
+    />
+  </Box>
+</Box>
+
+{/* Résumé & reset */}
+<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+  <Chip size="small" label={`Résultats: ${filteredEmployees.length}`} />
+  <Chip size="small" color="primary" label={`Sélectionnés: ${editedEmployeIds.length}`} />
+  <Button size="small" onClick={resetFilters}>Réinitialiser filtres</Button>
+</Box>
+{/* 🆕 Boutons de sélection de masse (listes filtrées) */}
+<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+  <Button variant="outlined" color="primary" onClick={selectAllFiltered}>Tout</Button>
+  <Button variant="outlined" color="primary" onClick={selectNoneFiltered}>Rien</Button>
+  <Button variant="outlined" color="primary" onClick={invertFiltered}>Inverser</Button>
+</Box>
+
+{/* 🆕 Sélections de masse */}
+<Box
+  sx={{
+    display: 'grid',
+    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' },
+    gap: 1,
+    mb: 1,
+  }}
+>
+  {/* Sélectionner les résultats filtrés */}
+  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+    <Button variant="outlined" color="primary" onClick={selectFilteredForCurrent}>
+      Sélectionner résultats filtrés
+    </Button>
+    <Typography variant="caption" color="text.secondary">
+      ({filteredEmployees.length} items)
+    </Typography>
+  </Box>
+
+  {/* Par rayon (m) */}
+  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+    <TextField
+      type="number"
+      size="small"
+      label="Rayon (m)"
+      value={radiusM}
+      onChange={(e) => setRadiusM(Math.max(0, Number(e.target.value)))}
+      InputLabelProps={{ shrink: true }}
+      sx={{ width: 120 }}
+    />
+    <Button variant="outlined" color="primary" onClick={selectByRadiusForCurrent}>
+      Par rayon
+    </Button>
+  </Box>
+
+  {/* Top-K plus proches */}
+  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+    <TextField
+      type="number"
+      size="small"
+      label="Top-K"
+      value={topK}
+      onChange={(e) => setTopK(Math.max(0, Number(e.target.value)))}
+      InputLabelProps={{ shrink: true }}
+      sx={{ width: 120 }}
+    />
+    <Button variant="outlined" color="primary" onClick={selectTopKNearestForCurrent}>
+      Top-K proches
+    </Button>
+  </Box>
+</Box>
+
+{/* 🆕 Capacité (optionnel) */}
+{selectedCluster && (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+    <Typography variant="body2">
+      Sélectionnés: <b>{editedEmployeIds.length}</b>
+    </Typography>
+  </Box>
+)}
+
+
+
+{/* Liste scrollable SEULEMENT ici */}
+<Box sx={{ mt: 1, border: '1px solid #eee', borderRadius: 1, p: 1, maxHeight: '45vh', overflow: 'auto' }}>
+  {filteredEmployees.map((emp: any) => {
+    const checked = editedEmployeIds.includes(emp.ID);
     return (
-      <li key={emp}>
-        {employe
-          ? `${employe.matricule ?? ''} - ${employe.nom} ${employe.prenom} (${employe.email ?? ''}) (${employe.telephone ?? ''})`
-          : emp}
-      </li>
+      <Box key={emp.ID} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => {
+            setEditedEmployeIds((prev) =>
+              e.target.checked ? [...prev, emp.ID] : prev.filter(id => id !== emp.ID)
+            );
+          }}
+        />
+        <Typography variant="body2">
+          {(emp.matricule ?? '')} — {emp.nom} {emp.prenom} · {emp.ville ?? ''} · {emp.service ?? ''} · {emp.departement ?? ''}
+        </Typography>
+      </Box>
     );
   })}
-</ul>
+</Box>
 
-              </Box>
+{/* Actions */}
+<Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+  <Button variant="outlined" size="small" onClick={() => setOpenDialog(false)}>Annuler</Button>
+  <Button
+    variant="contained"
+    size="small"
+    sx={{ bgcolor: '#228B22', '&:hover': { bgcolor: '#1d741d' } }} // vert forêt
+    onClick={() => {
+      const idx = (previewResult.clustersByGroupe?.[selectedCluster.groupe.id] ?? []).findIndex(
+        (c: any) => c.latitude === selectedCluster.latitude && c.longitude === selectedCluster.longitude && c.ordre === selectedCluster.ordre
+      );
+      if (idx >= 0) onEditEmployes?.(selectedCluster.groupe.id, idx, editedEmployeIds);
+      setOpenDialog(false);
+    }}
+  >
+    Enregistrer
+  </Button>
+</Box>
+
+                
+               
+
+              
+
+
             </>
           )}
         </DialogContent>
       </Dialog>
     </Box>
+    </ThemeProvider>
   );
 };
 

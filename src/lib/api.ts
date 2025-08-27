@@ -1702,3 +1702,46 @@ export async function fetchEmbarquementsByExecution(executionId: string) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+
+
+//===================================================IA PROPOSAL ==========================================================================
+
+// --- IA / VRP ---
+export async function aiListSites() {
+  const res = await fetch(`${API_BASE_URL}/ai/sites`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function aiSuggestRoutes(payload: { site_id: string; date: string; depart_time?: string }) {
+  const res = await fetch(`${API_BASE_URL}/ai/suggest-routes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function aiGetProposal(id: string) {
+  const res = await fetch(`${API_BASE_URL}/ai/proposals/${id}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function aiAcceptProposal(id: string) {
+  const res = await fetch(`${API_BASE_URL}/ai/proposals/${id}/accept`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+// util headers (si tu as déjà une fonction similaire, réutilise-la)
+function authHeaders() {
+  const token = localStorage.getItem('token') || ''
+  const societeId = localStorage.getItem('societe_id') || ''
+  return { Authorization: `Bearer ${token}`, 'x-societe-id': societeId }
+}
