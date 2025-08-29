@@ -135,6 +135,8 @@ const totalVehiculesUtilises = vehiculesUtilisesSet.size;
   // Ouvrir le détail
   const handleOpenDialog = (cluster: any, groupe: any) => {
   setSelectedCluster({ ...cluster, groupe });
+  setLastSpatialMode('none'); // Réinitialiser le mode spatial
+
   // initialiser les IDs (cas départ: c.employes = IDs)
   const ids = Array.isArray(cluster.employes)
     ? cluster.employes.map((x: any) => (typeof x === 'string' ? x : x?.ID)).filter(Boolean)
@@ -172,6 +174,10 @@ const [filters, setFilters] = useState<{ ville: string; service: string; departe
 const [radiusM, setRadiusM] = useState<number>(300); // rayon en mètres (défaut 300m)
 const [topK, setTopK] = useState<number>(10);        // K plus proches (défaut 10)
 
+// 🆕 mémorisation du dernier mode spatial utilisé par les boutons
+//    'none' = aucun, 'radius' = Par rayon, 'topk' = Top-K proches
+
+const [lastSpatialMode, setLastSpatialMode] = useState<'none' | 'radius' | 'topk'>('none');
 
 // 🆕 Sélection polygone (carte)
 const [polygonMode, setPolygonMode] = useState(false);
@@ -249,58 +255,71 @@ const getSelectedClusterIndex = () => {
 
 
 
-// 🆕 3.1 Sélectionner tous les employés filtrés (facettes + recherche)
+// 🆕 3.1 Sélectionner tous les employés filtrés (facettes + recherche + mode spatial actif)
+// ⚠️ Local uniquement : on ne notifie PAS le parent ici (étape 1/3).
+//    Le mode spatial appliqué est le DERNIER cliqué entre "Par rayon" et "Top-K proches".
 const selectFilteredForCurrent = () => {
   if (!selectedCluster) return;
-  const idx = getSelectedClusterIndex();
-  if (idx < 0) return;
-  const ids = filteredEmployees.map((e: any) => e.ID);
-  onEditEmployes?.(selectedCluster.groupe.id, idx, ids);
+
+  const { latitude: clat, longitude: clng } = selectedCluster;
+
+  // 1) Base = résultat des facettes + recherche
+  let candidates = filteredEmployees as Array<any>;
+
+  // 2) Appliquer le dernier mode spatial utilisé, si pertinent
+  if (lastSpatialMode === 'radius' && Number.isFinite(radiusM) && radiusM > 0) {
+    candidates = candidates
+      .filter((e: any) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude))
+      .filter((e: any) => haversine(clat, clng, e.latitude, e.longitude) <= radiusM);
+  } else if (lastSpatialMode === 'topk' && Number.isFinite(topK) && topK > 0) {
+    candidates = candidates
+      .filter((e: any) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude))
+      .map((e: any) => ({ e, d: haversine(clat, clng, e.latitude, e.longitude) }))
+      .sort((a: any, b: any) => a.d - b.d)
+      .slice(0, Math.max(0, Math.trunc(topK)))
+      .map((x: any) => x.e);
+  }
+
+  // 3) Appliquer dans l'état local du dialog uniquement
+  const ids = candidates.map((e: any) => e.ID);
   setEditedEmployeIds(ids);
 };
 
 // 🆕 3.2 Sélection par rayon autour du marker du cluster
+// ⚠️ Local uniquement + on mémorise le mode spatial 'radius'.
 const selectByRadiusForCurrent = () => {
   if (!selectedCluster) return;
-  const idx = getSelectedClusterIndex();
-  if (idx < 0) return;
 
   const { latitude: clat, longitude: clng } = selectedCluster;
-  const all = previewResult.employesByGroupe?.[selectedCluster.groupe.id] ?? [];
+  const all = (previewResult.employesByGroupe?.[selectedCluster.groupe.id] ?? [])
+    .filter((e: any) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude));
 
   const ids = all
-    .filter((e: any) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude))
     .filter((e: any) => haversine(clat, clng, e.latitude, e.longitude) <= radiusM)
     .map((e: any) => e.ID);
 
-  onEditEmployes?.(selectedCluster.groupe.id, idx, ids);
   setEditedEmployeIds(ids);
+  setLastSpatialMode('radius'); // 🆕 mémoriser ce mode
 };
 
 // 🆕 3.3 Top-K plus proches du marker
+// ⚠️ Local uniquement + on mémorise le mode spatial 'topk'.
 const selectTopKNearestForCurrent = () => {
   if (!selectedCluster) return;
-  const idx = getSelectedClusterIndex();
-  if (idx < 0) return;
 
   const { latitude: clat, longitude: clng } = selectedCluster;
-  const all = (previewResult.employesByGroupe?.[selectedCluster.groupe.id] ?? []).filter(
-    (e: any) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude)
-  );
+  const all = (previewResult.employesByGroupe?.[selectedCluster.groupe.id] ?? [])
+    .filter((e: any) => Number.isFinite(e.latitude) && Number.isFinite(e.longitude));
 
   const ids = all
-    .map((e: any) => ({
-      id: e.ID,
-      d: haversine(clat, clng, e.latitude, e.longitude),
-    }))
+    .map((e: any) => ({ id: e.ID, d: haversine(clat, clng, e.latitude, e.longitude) }))
     .sort((a: any, b: any) => a.d - b.d)
     .slice(0, Math.max(0, Math.trunc(topK)))
     .map((x: any) => x.id);
 
-  onEditEmployes?.(selectedCluster.groupe.id, idx, ids);
   setEditedEmployeIds(ids);
+  setLastSpatialMode('topk'); // 🆕 mémoriser ce mode
 };
-
 
 
 
@@ -607,14 +626,31 @@ const resetFilters = () => setFilters({ ville: '', service: '', departement: '',
       <Dialog
   open={openDialog}
   onClose={() => setOpenDialog(false)}
-  maxWidth="md"                  // ← largeur MUI ~ 900px
+  maxWidth="md"
   fullWidth
+  // 🆕 le papier ne scrollera pas, il sert juste de conteneur flex
   PaperProps={{
-    sx: { width: '72vw', maxWidth: 980, maxHeight: '88vh' } // ← borne responsive + hauteur
+    sx: {
+      width: '72vw',
+      maxWidth: 980,
+      maxHeight: '88vh',
+      overflow: 'hidden',          // 🆕 coupe le scroll du Dialog
+      display: 'flex',             // 🆕 layout vertical
+      flexDirection: 'column'      // 🆕 header / content / actions
+    }
   }}
 >
 
-        <DialogTitle>
+
+        <DialogTitle
+        sx={{
+    position: 'sticky', top: 0, zIndex: 1,
+    bgcolor: 'background.paper',
+    borderBottom: '1px solid', borderColor: 'divider'
+  }}
+        
+        
+        >
           Détails des employés
           <IconButton
             aria-label="close"
@@ -624,7 +660,18 @@ const resetFilters = () => setFilters({ ville: '', service: '', departement: '',
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers sx={{ px: 3, py: 2 }}>
+
+
+        <DialogContent
+  dividers
+  sx={{
+    px: 3, py: 2,
+    flex: 1,                 // 🆕 occupe l'espace entre le titre et les actions
+    overflow: 'hidden',      // 🆕 pas de scroll ici
+    display: 'flex',         // 🆕 on va piloter la liste en flex
+    flexDirection: 'column'
+  }}
+>
 
            
           {selectedCluster && (
@@ -793,7 +840,7 @@ const resetFilters = () => setFilters({ ville: '', service: '', departement: '',
 
 
 {/* Liste scrollable SEULEMENT ici */}
-<Box sx={{ mt: 1, border: '1px solid #eee', borderRadius: 1, p: 1, maxHeight: '45vh', overflow: 'auto' }}>
+<Box sx={{ mt: 1, border: '1px solid #eee', borderRadius: 1, p: 1, flex: 1, minHeight: 0, overflow: 'auto' }}>
   {filteredEmployees.map((emp: any) => {
     const checked = editedEmployeIds.includes(emp.ID);
     return (
@@ -816,30 +863,68 @@ const resetFilters = () => setFilters({ ville: '', service: '', departement: '',
 </Box>
 
 {/* Actions */}
-<Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+<Box sx={{
+    position: 'sticky', bottom: 0, zIndex: 1,
+    bgcolor: 'background.paper',
+    borderTop: '1px solid', borderColor: 'divider',
+    display: 'flex', justifyContent: 'flex-end', gap: 1,
+    pt: 1, mt: 2
+  }}>
   <Button variant="outlined" size="small" onClick={() => setOpenDialog(false)}>Annuler</Button>
-  <Button
-    variant="contained"
-    size="small"
-    sx={{ bgcolor: '#228B22', '&:hover': { bgcolor: '#1d741d' } }} // vert forêt
-    onClick={() => {
-      const idx = (previewResult.clustersByGroupe?.[selectedCluster.groupe.id] ?? []).findIndex(
-        (c: any) => c.latitude === selectedCluster.latitude && c.longitude === selectedCluster.longitude && c.ordre === selectedCluster.ordre
-      );
-      if (idx >= 0) onEditEmployes?.(selectedCluster.groupe.id, idx, editedEmployeIds);
-      setOpenDialog(false);
-    }}
-  >
-    Enregistrer
-  </Button>
+ {/* 🆕 Enregistrer : unicité globale d'affectation */}
+    <Button
+      variant="contained"
+      size="small"
+      sx={{ bgcolor: '#228B22', '&:hover': { bgcolor: '#1d741d' } }}
+      onClick={() => {
+        if (!selectedCluster) return;
+
+        // 1) retrouver l'index du cluster courant (mêmes critères que ton code existant)
+        const currentIdx = (previewResult.clustersByGroupe?.[selectedCluster.groupe.id] ?? []).findIndex(
+          (c: any) =>
+            c.latitude === selectedCluster.latitude &&
+            c.longitude === selectedCluster.longitude &&
+            c.ordre === selectedCluster.ordre
+        );
+        if (currentIdx < 0) return;
+
+        // 2) normaliser & dédupliquer la sélection courante
+        const chosenIds = Array.from(new Set(editedEmployeIds));
+
+        // 3) retirer ces employés de tous les AUTRES clusters (tous groupes confondus)
+        const allGroups = previewResult.clustersByGroupe ?? {};
+        Object.entries(allGroups).forEach(([gId, clusters]: [string, any[]]) => {
+          clusters.forEach((c: any, idx: number) => {
+            // ignorer le cluster courant
+            if (gId === selectedCluster.groupe.id && idx === currentIdx) return;
+
+            // normaliser la liste d'IDs du cluster cible
+            const currentIds = Array.isArray(c.employes)
+              ? c.employes.map((x: any) => (typeof x === 'string' ? x : x?.ID)).filter(Boolean)
+              : [];
+
+            // filtrer en retirant les IDs choisis sur le cluster courant
+            const filtered = currentIds.filter((id: string) => !chosenIds.includes(id));
+
+            // si changement, pousser la mise à jour vers le parent pour CE cluster
+            if (filtered.length !== currentIds.length) {
+              onEditEmployes?.(gId, idx, filtered);
+            }
+          });
+        });
+
+        // 4) appliquer la sélection au cluster courant
+        onEditEmployes?.(selectedCluster.groupe.id, currentIdx, chosenIds);
+
+        // 5) fermer le dialog
+        setOpenDialog(false);
+      }}
+    >
+      Enregistrer
+    </Button>
 </Box>
 
-                
-               
-
-              
-
-
+  
             </>
           )}
         </DialogContent>
