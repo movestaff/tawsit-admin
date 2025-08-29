@@ -6,7 +6,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Button, Dialog, DialogTitle, DialogContent, IconButton, TextField
 } from '@mui/material';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import CloseIcon from '@mui/icons-material/Close';
 import DirectionsBusIcon from '@mui/icons-material/DirectionsBus';
 import GroupIcon from '@mui/icons-material/Group';
@@ -42,6 +42,43 @@ const customIcon = L.icon({
   shadowAnchor: [12, 41],
 });
 
+// Palette stable (modifiable)
+const VEHICLE_COLORS = [
+  '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+  '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+  '#bcbd22', '#17becf'
+];
+
+// Petit hash stable pour distribuer les couleurs sans dépendance externe
+const hashString = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i), h |= 0;
+  return Math.abs(h);
+};
+const colorForVehicule = (key: string) => VEHICLE_COLORS[hashString(key) % VEHICLE_COLORS.length];
+
+/** Marqueur HTML numéroté et coloré */
+const numberIcon = (n: number | string, color: string) =>
+  L.divIcon({
+    className: '', // pas de classe par défaut
+    html: `
+      <div style="
+        width:32px;height:32px;line-height:32px;
+        border-radius:20px;
+        background:${color};
+        color:#fff;
+        font-weight:700;
+        text-align:center;
+        box-shadow:0 1px 4px rgba(0,0,0,.35);
+        border:2px solid rgba(255,255,255,.9);
+      ">
+        ${n ?? ''}
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -30],
+  });
 
 
 type Employe = {
@@ -369,6 +406,37 @@ const filteredEmployees = useMemo(() => {
 const resetFilters = () => setFilters({ ville: '', service: '', departement: '', actif: true });
 
 
+
+// 🆕 Construit une polyline ordonnée par véhicule (tous groupes confondus, hors retours flexibles)
+const itinerairesParVehicule = useMemo(() => {
+  const map: Record<string, { color: string; coords: [number, number][]; label: string }> = {};
+
+  // on parcourt les groupes pour garder l'ordre (c.ordre)
+  for (const groupe of previewResult.groupes) {
+    const clusters = (previewResult.clustersByGroupe?.[groupe.id] ?? [])
+      .filter((c: any) => !c.retourFlexible)
+      .slice()
+      .sort((a: any, b: any) => (a.ordre ?? 0) - (b.ordre ?? 0));
+
+    for (const c of clusters) {
+      const vehKey = String(c.vehicule ?? 'no-veh');         // clé couleur
+      const color = colorForVehicule(vehKey);
+      const veh = previewResult.vehiculesDisponibles?.[c.vehicule ?? 0];
+      const label = veh?.immatriculation ? veh.immatriculation : `Véhicule ${vehKey}`;
+
+      if (!map[vehKey]) map[vehKey] = { color, coords: [], label };
+
+      if (Number.isFinite(c.latitude) && Number.isFinite(c.longitude)) {
+        map[vehKey].coords.push([c.latitude, c.longitude]);
+      }
+    }
+  }
+
+  return Object.entries(map).map(([vehKey, v]) => ({ vehKey, ...v }));
+}, [previewResult]);
+
+
+
 //*****************************************************************************.. */
 //**************************************************************************** */
 
@@ -382,51 +450,93 @@ const resetFilters = () => setFilters({ ville: '', service: '', departement: '',
       <Card sx={{ mb: 2 }}>
         <CardContent>
          
+<Box sx={{ position: 'relative' }}>
+  {/* 🆕 Légende couleurs véhicules */}
+  <Box sx={{
+    position: 'absolute', right: 8, top: 8, zIndex: 1000,
+    bgcolor: 'rgba(255,255,255,0.95)', border: '1px solid #e0e0e0',
+    borderRadius: 1, p: 1, maxWidth: 260
+  }}>
+    <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: .5 }}>
+      Légende véhicules
+    </Typography>
+    {itinerairesParVehicule.map(({ vehKey, color, label }) => (
+      <Box key={vehKey} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: .5 }}>
+        <span style={{ width: 14, height: 6, background: color, display: 'inline-block', borderRadius: 2 }} />
+        <Typography variant="caption">{label}</Typography>
+      </Box>
+    ))}
+  </Box>
+
+
+
+
+         
           <MapContainer center={[avgLat, avgLng]} zoom={12} style={{ height: '500px', width: '100%' }}>
   <TileLayer
     attribution='&copy; OpenStreetMap contributors'
     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
   />
 
+   {/* 🆕 Polylignes par véhicule (dessinées AVANT les marqueurs) */}
+    {itinerairesParVehicule.map(({ vehKey, color, coords }) =>
+      coords.length >= 2 ? (
+        <Polyline
+          key={`poly-${vehKey}`}
+          positions={coords}
+          pathOptions={{ color, weight: 4, opacity: 0.9 }}
+        />
+      ) : null
+    )}
+
   {/* Affichage des clusters de type DEPART uniquement (exclusion des retours flexibles) */}
   {previewResult.groupes.map((groupe) =>
-    (previewResult.clustersByGroupe?.[groupe.id] ?? [])
-      .filter(c => !c.retourFlexible)
-      .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
-      .map((c, idx) => (
-       <Marker
-  key={`${groupe.id}-${idx}`}
-  position={[c.latitude, c.longitude]}
-  icon={customIcon}
-  draggable // 🆕 rendre le point editable
-  eventHandlers={{
-    dragend: (e) => {
-      const m = e.target;
-      const { lat, lng } = m.getLatLng();
-      onMoveMarker?.(groupe.id, idx, lat, lng); // 🆕 remontée parent
-    }
-  }}
->
-  <Popup>
-    <Typography variant="subtitle2">{groupe.nom}</Typography>
-    <Typography variant="body2">Cluster #{idx + 1}</Typography>
-    <Typography variant="body2">Ordre : {c.ordre ?? '-'}</Typography>
-    <Typography variant="body2">
-      Véhicule: {vehiculesByIndex[c.vehicule]?.immatriculation ?? 'N/A'}
-    </Typography>
-    <Typography variant="body2">Distance max : {c.distance_max_m ?? 'N/A'} m</Typography>
-    <Typography variant="body2">Valide : {c.valide ? '✅' : '❌'}</Typography>
-    <Typography variant="body2">Nb Employés : {c.employes?.length ?? 0}</Typography>
-    {/* 🆕 Actions rapides */}
-    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-      <Button size="small" variant="outlined" onClick={() => onSetOrdre?.(groupe.id, idx, (c.ordre ?? (idx+1)) - 1)}>▲ ordre</Button>
-      <Button size="small" variant="outlined" onClick={() => onSetOrdre?.(groupe.id, idx, (c.ordre ?? (idx+1)) + 1)}>▼ ordre</Button>
-      <Button size="small" variant="outlined" onClick={() => handleOpenDialog(c, groupe)}>Éditer employés</Button>
-    </Box>
-  </Popup>
-</Marker>
-      ))
-  )}
+  (previewResult.clustersByGroupe?.[groupe.id] ?? [])
+    .filter(c => !c.retourFlexible)
+    .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
+    // ⬇️ utiliser un body en { … } et retourner explicitement le JSX
+    .map((c, idx) => {
+      // ✅ on peut maintenant déclarer des const ici sans erreur
+      const vehKey = String(c.vehicule ?? 'no-veh');
+      const color = colorForVehicule(vehKey);
+      const ordre = (c.ordre ?? (idx + 1));
+
+      return (
+        <Marker
+          key={`${groupe.id}-${idx}`}
+          position={[c.latitude, c.longitude]}
+          // ⬇️ si tu veux le badge numéroté coloré, utilise numberIcon :
+          icon={numberIcon(ordre, color)}
+          // si tu préfères garder l’icône par défaut, remets customIcon
+          draggable
+          eventHandlers={{
+            dragend: (e) => {
+              const m = e.target;
+              const { lat, lng } = m.getLatLng();
+              onMoveMarker?.(groupe.id, idx, lat, lng);
+            }
+          }}
+        >
+          <Popup>
+            <Typography variant="subtitle2">{groupe.nom}</Typography>
+            <Typography variant="body2">Cluster #{idx + 1}</Typography>
+            <Typography variant="body2">Ordre : {c.ordre ?? '-'}</Typography>
+            <Typography variant="body2">
+              Véhicule: {vehiculesByIndex[c.vehicule]?.immatriculation ?? 'N/A'}
+            </Typography>
+            <Typography variant="body2">Distance max : {c.distance_max_m ?? 'N/A'} m</Typography>
+            <Typography variant="body2">Valide : {c.valide ? '✅' : '❌'}</Typography>
+            <Typography variant="body2">Nb Employés : {c.employes?.length ?? 0}</Typography>
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button size="small" variant="outlined" onClick={() => onSetOrdre?.(groupe.id, idx, (c.ordre ?? (idx+1)) - 1)}>▲ ordre</Button>
+              <Button size="small" variant="outlined" onClick={() => onSetOrdre?.(groupe.id, idx, (c.ordre ?? (idx+1)) + 1)}>▼ ordre</Button>
+              <Button size="small" variant="outlined" onClick={() => handleOpenDialog(c, groupe)}>Éditer employés</Button>
+            </Box>
+          </Popup>
+        </Marker>
+      );
+    })
+)}
 
   {/* Sites de destination */}
   {Object.entries(previewResult.siteById || {}).map(([siteId, site]) => (
@@ -451,6 +561,7 @@ const resetFilters = () => setFilters({ ville: '', service: '', departement: '',
     </Marker>
   ))}
 </MapContainer>
+</Box>
 
         </CardContent>
       </Card>
