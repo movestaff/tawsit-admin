@@ -305,7 +305,7 @@ const handleEditEmployes = (groupeId: string, clusterIdx: number, employeIds: st
     
     <Box sx={{ maxWidth: 1600, mx: 'auto', p: 2 }}>
       <Typography variant="h4" gutterBottom>
-        Assistant de planification automatique
+        Assistant de planification par IA
       </Typography>
 
       <Paper sx={{ p: 2, mb: 2 }}>

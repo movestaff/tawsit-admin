@@ -6,7 +6,7 @@ import AutoPlanificationAssistant from '../pages/Autoplan/AutoPlanificationAssis
 const onglets = [
   { label: 'Planification', value: 'planification' },
   { label: 'Calendrier', value: 'calendrier' },
-  { label: 'Assistant AutoPlan', value: 'autoplan' },
+  { label: 'Assistant AutoPlan IA', value: 'autoplan' },
 ]
 
 export default function PlanificationCalendrier() {
