@@ -800,6 +800,7 @@ export async function previewAutoPlan(payload: {
   groupe_ids: string[];
   vehicule_ids: string[];
   date_reference?: string;
+   openTour?: boolean;
 }) {
   const res = await fetch(`${API_BASE_URL}/auto-plan-preview`, {
     method: 'POST',
@@ -1704,6 +1705,45 @@ export async function fetchEmbarquementsByExecution(executionId: string) {
 }
 
 
+// =========================dashboard===============
+
+export async function fetchCTEForExecution(execution_id: any) {
+return fetchWithAuth(`${API_BASE_URL}/executions/${execution_id}/cte`, {
+method: 'GET',
+headers: getAuthHeaders('application/json')
+}).then(res => {
+if (!res.ok) throw new Error('Erreur CTE');
+return res.json();
+});
+}
+
+
+export async function fetchStatsMontantEtTransport(dateDebut: string, dateFin: string) {
+  if (!dateDebut || !dateFin) {
+    throw new Error('Les dates de début et fin sont requises.');
+  }
+
+  const url = `${API_BASE_URL}/executions/stats/periode?date_debut=${dateDebut}&date_fin=${dateFin}`;
+
+  try {
+    const result = await fetchWithAuth(url, {
+      method: 'GET',
+      headers: getAuthHeaders('application/json'),
+    });
+
+    if (!result || typeof result !== 'object') {
+      throw new Error('Résultat API invalide');
+    }
+
+    return result as { total_montant: number; total_employes_transportes: number };
+  } catch (err: any) {
+    console.error('[CTE] Erreur fetchStatsMontantEtTransport :', err);
+    throw new Error(err?.message || 'Erreur inconnue lors du fetch CTE');
+  }
+}
+
+
+
 
 //===================================================IA PROPOSAL ==========================================================================
 
@@ -1739,7 +1779,7 @@ export async function aiAcceptProposal(id: string) {
   return res.json()
 }
 
-// util headers (si tu as déjà une fonction similaire, réutilise-la)
+// util headers
 function authHeaders() {
   const token = localStorage.getItem('token') || ''
   const societeId = localStorage.getItem('societe_id') || ''

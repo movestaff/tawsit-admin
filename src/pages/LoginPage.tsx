@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Label } from '../components/ui/label'
 import { loginWeb } from '../lib/api'
-import logo from '../assets/logo-tawsit.png'
+import logo from '../assets/logo2.png'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabaseClient'
 
@@ -56,8 +56,8 @@ export default function LoginPage() {
 }
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] px-4">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <img src={logo} alt="Logo Tawsit" className="mx-auto mb-6 h-24" />
+      <div className="bg-[#F4F4F4] p-8 rounded-lg shadow-lg w-full max-w-md">
+        <img src={logo} alt="Logo Tawsit" className="mx-auto mb-12 h-48" />
         <h2 className="text-center text-2xl font-bold text-[#228B22] mb-6">Connexion Tawsit</h2>
 
         <form onSubmit={handleSubmit}>

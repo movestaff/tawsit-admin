@@ -9,7 +9,8 @@ import {
   CircularProgress,
   RadioGroup,
   FormControlLabel,
-  Radio
+  Radio,
+  Switch
 } from '@mui/material';
 import { toast } from 'react-toastify';
 import { lazy } from 'react';
@@ -83,6 +84,7 @@ export default function AutoPlanificationAssistant() {
   const [loading, setLoading] = useState(false);
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const [planificationType, setPlanificationType] = useState<'depart' | 'retour'>('depart');
+  const [openTour, setOpenTour] = useState(false);
 
   // 🆕 Helpers d'édition (mutations immuables sur previewResult)
 const updateClusterAt = (groupeId: string, clusterIdx: number, patch: any) => {
@@ -221,7 +223,8 @@ const handleEditEmployes = (groupeId: string, clusterIdx: number, employeIds: st
       const res = await previewAutoPlan({
         groupe_ids: selectedGroupes,
         vehicule_ids: selectedVehicules.map(v => v.id),
-        date_reference: dateReference?.toISOString().split('T')[0]
+        date_reference: dateReference?.toISOString().split('T')[0],
+        openTour
       });
       setPreviewResult(res);
       toast.success("✅ Calcul de la planification réussi !");
@@ -305,7 +308,7 @@ const handleEditEmployes = (groupeId: string, clusterIdx: number, employeIds: st
     
     <Box sx={{ maxWidth: 1600, mx: 'auto', p: 2 }}>
       <Typography variant="h4" gutterBottom>
-        Assistant de planification par IA
+        Assistant de planification IA
       </Typography>
 
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -317,7 +320,23 @@ const handleEditEmployes = (groupeId: string, clusterIdx: number, employeIds: st
   >
     <FormControlLabel value="depart" control={<Radio />} label="Aller (avec arrêts optimisés)" />
     <FormControlLabel value="retour" control={<Radio />} label="Retour (flexible sans arrêts)" />
+    <FormControlLabel
+  control={
+    <Switch
+      checked={openTour}
+      onChange={(e) => setOpenTour(e.target.checked)}
+      color="primary"
+    />
+  }
+  label="Tournée ouverte (sans retour au point de départ)"
+  sx={{ ml: 2 }}
+/>
+
+    
+
+    
   </RadioGroup>
+  
 </Paper>
 
 

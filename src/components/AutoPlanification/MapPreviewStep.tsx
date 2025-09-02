@@ -42,6 +42,22 @@ const customIcon = L.icon({
   shadowAnchor: [12, 41],
 });
 
+
+//  Taille du pin "Site" (en px)
+const SITE_SIZE = 56; 
+
+
+const siteIcon = L.icon({
+  iconUrl: '/site-pin-building-solid.svg',
+  iconSize: [SITE_SIZE, SITE_SIZE],
+  iconAnchor: [Math.round(SITE_SIZE / 2), Math.round(SITE_SIZE * 62 / 64)],
+  popupAnchor: [0, -Math.round(SITE_SIZE * 0.8)],
+  
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  shadowSize: [41, 41],
+  shadowAnchor: [12, 41],
+});
+
 // Palette stable (modifiable)
 const VEHICLE_COLORS = [
   '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
@@ -435,6 +451,47 @@ const itinerairesParVehicule = useMemo(() => {
   return Object.entries(map).map(([vehKey, v]) => ({ vehKey, ...v }));
 }, [previewResult]);
 
+// ➕ Segments "dernier arrêt du groupe → site" (on garde les polylines existantes)
+const extensionsDernierVersSite = useMemo(() => {
+  const segs: Array<{ key: string; color: string; positions: [number, number][] }> = [];
+
+  for (const groupe of (previewResult.groupes ?? [])) {
+    // on prend seulement les arrêts "aller" (on exclut les retours flexibles)
+    const clusters = (previewResult.clustersByGroupe?.[groupe.id] ?? [])
+      .filter((c: any) => !c.retourFlexible)
+      .slice()
+      .sort((a: any, b: any) => (a.ordre ?? 0) - (b.ordre ?? 0));
+
+    if (!clusters.length) continue;
+    const last = clusters[clusters.length - 1];
+
+    const site = previewResult.siteById?.[groupe.site_id];
+    if (!site) continue;
+
+    // garde-fous coord
+    if (!Number.isFinite(last.latitude) || !Number.isFinite(last.longitude)) continue;
+    if (!Number.isFinite(site.lat) || !Number.isFinite(site.lng)) continue;
+
+    // même couleur que le véhicule assigné au dernier arrêt
+    const vehKey = String(last.vehicule ?? 'no-veh');
+    const color = colorForVehicule(vehKey);
+
+    // évite un mini segment si le site est déjà quasiment sur le point (ex: < 20 m)
+    const d = haversine(last.latitude, last.longitude, site.lat, site.lng);
+    if (d < 20) continue;
+
+    segs.push({
+      key: `ext-${groupe.id}`,
+      color,
+      positions: [
+        [last.latitude, last.longitude],
+        [site.lat, site.lng],
+      ],
+    });
+  }
+
+  return segs;
+}, [previewResult]);
 
 
 //*****************************************************************************.. */
@@ -489,14 +546,25 @@ const itinerairesParVehicule = useMemo(() => {
       ) : null
     )}
 
+    {/* ➕ Prolongements "dernier arrêt → site" */}
+{extensionsDernierVersSite.map(({ key, color, positions }) => (
+  <Polyline
+    key={key}
+    positions={positions}
+    // pointillé pour distinguer du tracé principal
+    pathOptions={{ color, weight: 4, opacity: 0.9 }}
+  />
+))}
+
+
   {/* Affichage des clusters de type DEPART uniquement (exclusion des retours flexibles) */}
   {previewResult.groupes.map((groupe) =>
   (previewResult.clustersByGroupe?.[groupe.id] ?? [])
     .filter(c => !c.retourFlexible)
     .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
-    // ⬇️ utiliser un body en { … } et retourner explicitement le JSX
+    
     .map((c, idx) => {
-      // ✅ on peut maintenant déclarer des const ici sans erreur
+      
       const vehKey = String(c.vehicule ?? 'no-veh');
       const color = colorForVehicule(vehKey);
       const ordre = (c.ordre ?? (idx + 1));
@@ -543,15 +611,7 @@ const itinerairesParVehicule = useMemo(() => {
     <Marker
       key={`site-${siteId}`}
       position={[site.lat, site.lng]}
-      icon={L.icon({
-        iconUrl: '/destination-icon.png',
-        iconSize: [30, 45],
-        iconAnchor: [15, 45],
-        popupAnchor: [0, -40],
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        shadowSize: [41, 41],
-        shadowAnchor: [12, 41],
-      })}
+      icon={siteIcon}
     >
       <Popup>
         <Typography variant="subtitle2">🏁 Destination : {site.nom}</Typography>
