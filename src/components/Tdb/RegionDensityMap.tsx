@@ -187,8 +187,8 @@ export function RegionDensityMap() {
 
       {/* ✅ centre/zoom par défaut conservés si aucune donnée */}
       <MapContainer
-        center={[5.348, -4.027]}
-        zoom={6}
+        center={[33.5731, -7.5898]}
+        zoom={11}
         className="h-[400px] w-full rounded-lg z-0"
       >
         <TileLayer
