@@ -1856,6 +1856,35 @@ export async function fetchRemplissagePonctualiteTimeline(
   return fetchWithAuth(url, { method: 'GET', headers: getAuthHeaders('application/json') });
 }
 
+export type RemplPonctuParTour = {
+  tournee_id: string;
+  tournee_nom: string;
+  nb_exec: number;
+  transportes_total: number;
+  capacite_total: number;
+  taux_remplissage: number;   // %
+  ponctualite: number;        // %
+  nb_avances: number;
+  nb_eval_ponctualite: number;
+};
+
+export async function fetchRemplissagePonctualiteParTournee(
+  dateDebut: string,
+  dateFin: string,
+  avanceMinutes = 20
+): Promise<RemplPonctuParTour[]> {
+  const params = new URLSearchParams({
+    date_debut: dateDebut,
+    date_fin: dateFin,
+    avance: String(avanceMinutes),
+  });
+  return fetchWithAuth(`${API_BASE_URL}/dashboard/stats/remplissage-ponctualite-par-tournee?${params.toString()}`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+}
+
+
 
 
 

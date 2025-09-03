@@ -11,6 +11,8 @@ import ToursCostTimeline from '../components/Tdb/ToursCostTimeline';
 import ToursCompare from '../components/Tdb/ToursCompare';
 import { fetchStatsToursJour, fetchEmployesTransportesJour } from '../lib/api';
 import RemplissagePonctualiteTimeline from '../components/Tdb/RemplissagePonctualiteTimeline';
+import RemplissagePonctualiteParTournee from '../components/Tdb/RemplissagePonctualiteParTournee';
+
 
 export default function Dashboard() {
   const [dateDebut, setDateDebut] = useState('');
@@ -138,9 +140,7 @@ useEffect(() => {
           >
             <CalendarDays className="w-4 h-4" /> Semaine en cours
           </button>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary text-white px-3 py-2 text-sm shadow-soft hover:opacity-90">
-            <Download className="w-4 h-4" /> Export
-          </button>
+        
         </div>
       </div>
 
@@ -175,9 +175,9 @@ useEffect(() => {
           <RegionDensityMap />
         
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-1 gap-4">
        
-        
+        <RemplissagePonctualiteParTournee dateDebut={dateDebut} dateFin={dateFin} defaultAvance={20} />
       </div>
     </div>
   );
