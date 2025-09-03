@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { CalendarDays, Download, Filter } from 'lucide-react';
 import { KpiCard } from '../components/Tdb/KpiCard';
-import { PerformanceChart } from '../components/Tdb/PerformanceChart';
+//import PerformanceChart  from '../components/Tdb/PerformanceChart';
 import { CostsChart } from '../components/Tdb/CostsChart';
 import { AlertsList } from '../components/Tdb/AlertsList';
 import { RegionDensityMap } from '../components/Tdb/RegionDensityMap';
 import CteCard from '../components/Tdb/CteCard';
+import ToursCostCard from '../components/Tdb/ToursCostCard';
+import ToursCostTimeline from '../components/Tdb/ToursCostTimeline';
+import ToursCompare from '../components/Tdb/ToursCompare';
+import { fetchStatsToursJour, fetchEmployesTransportesJour } from '../lib/api';
+import RemplissagePonctualiteTimeline from '../components/Tdb/RemplissagePonctualiteTimeline';
 
 export default function Dashboard() {
   const [dateDebut, setDateDebut] = useState('');
@@ -29,6 +34,59 @@ export default function Dashboard() {
     setDateFin(toIsoDate(sunday));
   }, []);
 
+   const [toursJour, setToursJour] = useState<{ value: string; sub: string; trend: 'up'|'down'|'none'; trendValue: string }>({
+    value: '—',
+    sub: '',
+    trend: 'none',
+    trendValue: '',
+  });
+
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        const stats = await fetchStatsToursJour(); // aujourd'hui par défaut
+        if (cancel) return;
+
+        const value = String(stats.nb_today);
+        const sub = `${stats.delta >= 0 ? '+' : ''}${stats.delta} vs hier`;
+        const trend = stats.pct_change > 0 ? 'up' : stats.pct_change < 0 ? 'down' : 'none';
+        const trendValue = `${stats.pct_change > 0 ? '+' : ''}${stats.pct_change}%`;
+
+        setToursJour({ value, sub, trend, trendValue });
+      } catch (e) {
+        // Valeurs neutres en cas d'erreur
+        if (!cancel) setToursJour({ value: '—', sub: 'indisponible', trend: 'none', trendValue: '' });
+      }
+    })();
+    return () => { cancel = true; };
+  }, []);
+
+  const [emplJour, setEmplJour] = useState<{ value: string; sub: string; trend: 'up' | 'down' | 'none'; trendValue: string }>({
+  value: '—',
+  sub: '',
+  trend: 'none',
+  trendValue: '',
+});
+
+useEffect(() => {
+  let cancel = false;
+  (async () => {
+    try {
+      const stats = await fetchEmployesTransportesJour(); // aujourd'hui (TZ profil) par défaut
+      if (cancel) return;
+      const value = String(stats.nb_today);
+      const sub = `${stats.delta >= 0 ? '+' : ''}${stats.delta} vs hier`;
+      const trend = stats.pct_change > 0 ? 'up' : stats.pct_change < 0 ? 'down' : 'none';
+      const trendValue = `${stats.pct_change > 0 ? '+' : ''}${stats.pct_change}%`;
+      setEmplJour({ value, sub, trend, trendValue });
+    } catch (_e) {
+      if (!cancel) setEmplJour({ value: '—', sub: 'indisponible', trend: 'none', trendValue: '' });
+    }
+  })();
+  return () => { cancel = true; };
+}, []);
+
   return (
     <div className="min-h-screen bg-soft px-6 py-6">
       {/* En-tête avec champs date */}
@@ -49,6 +107,7 @@ export default function Dashboard() {
               onChange={(e) => setDateDebut(e.target.value)}
             />
           </div>
+          
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <label htmlFor="dateFin" className="text-sm text-gray-500">Fin</label>
             <input
@@ -87,20 +146,38 @@ export default function Dashboard() {
 
       {/* KPI row */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <KpiCard title="Tournées du jour" value="12" sub="+2 vs hier" trend="up" trendValue="+20%" />
-        <KpiCard title="Employés transportés" value="254" sub="Remplissage moyen 92%" />
-        <KpiCard title="Distance totale" value="438 km" sub="-5% vs moyenne" trend="down" trendValue="-5%" />
+        <KpiCard
+    title="Tournées du jour"
+    value={toursJour.value}
+    sub={toursJour.sub}
+    trend={toursJour.trend}
+    trendValue={toursJour.trendValue}
+  />
+        <KpiCard
+  title="Employés transportés"
+  value={emplJour.value}
+  sub={emplJour.sub}
+  trend={emplJour.trend}
+  trendValue={emplJour.trendValue}
+/>
+        
         <CteCard dateDebut={dateDebut} dateFin={dateFin} />
+        <ToursCostCard dateDebut={dateDebut} dateFin={dateFin} />
       </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+  <ToursCostTimeline dateDebut={dateDebut} dateFin={dateFin}/>
+  <ToursCompare dateDebut={dateDebut} dateFin={dateFin} top={8} />
+</div>
 
       {/* Charts et alertes + carte densité */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
-        <PerformanceChart />
-        <CostsChart />
+        <RemplissagePonctualiteTimeline dateDebut={dateDebut} dateFin={dateFin} defaultBucket="week" defaultSeuil={20} />
+          <RegionDensityMap />
+        
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <AlertsList />
-        <RegionDensityMap />
+       
+        
       </div>
     </div>
   );

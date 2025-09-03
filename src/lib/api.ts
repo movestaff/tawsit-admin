@@ -1743,6 +1743,121 @@ export async function fetchStatsMontantEtTransport(dateDebut: string, dateFin: s
 }
 
 
+export async function fetchRegionDensity(): Promise<{
+  total_employes_geolocalises: number;
+  regions: Array<{ ville: string; latitude: number; longitude: number; count: number; ratio: number }>;
+}> {
+  return fetchWithAuth(`${API_BASE_URL}/dashboard/density`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+}
+
+export async function fetchDensityMapCenter(): Promise<
+  | { mode: 'point'; center: { lat: number; lng: number }; zoom?: number }
+  | { mode: 'bounds'; bounds: { south: number; west: number; north: number; east: number }; pad?: number }
+  | { mode: 'timezone'; timezone: string | null; zoom?: number }
+> {
+  return fetchWithAuth(`${API_BASE_URL}/dashboard/map-center`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+}
+
+
+export async function fetchStatsCoutsTournees(dateDebut: string, dateFin: string): Promise<{
+  total_montant: number;
+  nb_tournees: number;
+  cout_moyen_par_tournee: number;
+  cout_min: number;
+  cout_max: number;
+}> {
+  const url = `${API_BASE_URL}/dashboard/stats/couts-tournees?date_debut=${dateDebut}&date_fin=${dateFin}`;
+  
+  return fetchWithAuth(url, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+}
+
+export async function fetchCoutsTourneesTimeline(
+  dateDebut: string,
+  dateFin: string,
+  bucket: 'day' | 'week' | 'month' = 'day'
+): Promise<Array<{ bucket_label: string; bucket_date: string; nb_tournees: number; montant_total: number; cout_moyen: number }>> {
+  const url = `${API_BASE_URL}/dashboard/stats/couts-timeline?date_debut=${dateDebut}&date_fin=${dateFin}&bucket=${bucket}`;
+  return fetchWithAuth(url, { method: 'GET', headers: getAuthHeaders('application/json') });
+}
+
+export async function fetchCoutsParTournee(dateDebut: string, dateFin: string): Promise<Array<{
+  tournee_id: string; tournee_nom: string; nb_exec: number; montant_total: number; cout_moyen_par_execution: number;
+}>> {
+  const url = `${API_BASE_URL}/dashboard/stats/couts-par-tournee?date_debut=${dateDebut}&date_fin=${dateFin}`;
+  return fetchWithAuth(url, { method: 'GET', headers: getAuthHeaders('application/json') });
+}
+
+export type ToursJourStats = {
+  date: string;
+  nb_today: number;
+  nb_yesterday: number;
+  delta: number;
+  pct_change: number;         // entier (%), ex: 20, -15, 0
+  montant_total_today: number;
+};
+
+export async function fetchStatsToursJour(date?: string): Promise<ToursJourStats> {
+  const params = new URLSearchParams();
+  if (date) params.set('date', date);
+
+  return fetchWithAuth(
+    `${API_BASE_URL}/dashboard/stats/jour${params.toString() ? `?${params.toString()}` : ''}`,
+    { method: 'GET', headers: getAuthHeaders('application/json') }
+  );
+}
+
+
+export type EmployesJourStats = {
+  date: string;
+  timezone: string;
+  nb_today: number;
+  nb_yesterday: number;
+  delta: number;
+  pct_change: number;          // entier (%)
+  total_boardings_today: number;
+};
+
+export async function fetchEmployesTransportesJour(date?: string): Promise<EmployesJourStats> {
+  const params = new URLSearchParams();
+  if (date) params.set('date', date);
+
+  return fetchWithAuth(
+    `${API_BASE_URL}/dashboard/stats/employes-jour${params.toString() ? `?${params.toString()}` : ''}`,
+    { method: 'GET', headers: getAuthHeaders('application/json') }
+  );
+}
+
+export type RemplPonctuPoint = {
+  bucket_label: string;
+  bucket_date: string;
+  taux_remplissage: number;    // %
+  ponctualite: number;         // %
+  nb_exec: number;
+  nb_avances: number;          // NEW
+  nb_eval_ponctualite: number;
+};
+
+export async function fetchRemplissagePonctualiteTimeline(
+  dateDebut: string,
+  dateFin: string,
+  bucket: 'day'|'week'|'month' = 'day',
+  avanceMinutes = 20
+): Promise<RemplPonctuPoint[]> {
+  const url = `${API_BASE_URL}/dashboard/stats/remplissage-ponctualite-timeline?date_debut=${dateDebut}&date_fin=${dateFin}&bucket=${bucket}&avance=${avanceMinutes}`;
+  return fetchWithAuth(url, { method: 'GET', headers: getAuthHeaders('application/json') });
+}
+
+
+
 
 
 //===================================================IA PROPOSAL ==========================================================================
