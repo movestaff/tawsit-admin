@@ -165,16 +165,7 @@ export default function AbsencesManager({
 
   return (
     <div className="w-full relative">
-      {/* Bouton Fermer en haut à droite */}
-      {onClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-2 top-2 px-2 py-1 text-sm rounded border border-primary/30 text-primary bg-white hover:bg-primary/5"
-        >
-          Fermer
-        </button>
-      )}
+      
 
       <h3 className="text-lg font-semibold mb-2"></h3>
 
