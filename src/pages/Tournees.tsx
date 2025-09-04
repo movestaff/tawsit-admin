@@ -12,6 +12,9 @@ import ListePointsArret from '../components/ListePointsArret'
 import ListeEmployesAffectesTournee from '../components/ListeEmployesAffectesTournee'
 import { Button } from '../components/ui/button'
 import { Pencil, Trash, MapPin, Users } from 'lucide-react'
+import AbsencesManager from '../components/AbsencesManager'
+import AbsencesList from '../components/AbsencesList'
+import dayjs from 'dayjs'
 
 function Tournees() {
   const [tournees, setTournees] = useState<any[]>([])
@@ -28,6 +31,12 @@ function Tournees() {
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [sites, setSites] = useState<Record<string, string>>({})
+ 
+  const [absencesModal, setAbsencesModal] = useState(false)
+  const [absDateDebut, setAbsDateDebut] = useState<string>(dayjs().format('YYYY-MM-DD'))
+  const [absDateFin, setAbsDateFin] = useState<string>(dayjs().format('YYYY-MM-DD'))
+  const [absListModal, setAbsListModal] = useState(false)
+
 
   const chargerTournees = async () => {
     setLoading(true)
@@ -163,6 +172,30 @@ function Tournees() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal déclaration d'absences */}
+<Dialog open={absencesModal} onOpenChange={(open) => setAbsencesModal(open)}>
+  <DialogContent className="w-full !max-w-5xl">
+    <DialogHeader>
+      <DialogTitle>Déclarer des absences</DialogTitle>
+    </DialogHeader>
+    <AbsencesManager
+      defaultDateDebut={absDateDebut}
+      defaultDateFin={absDateFin}
+      onClose={() => setAbsencesModal(false)}
+    />
+  </DialogContent>
+</Dialog>
+
+<Dialog open={absListModal} onOpenChange={(open) => setAbsListModal(open)}>
+  <DialogContent className="w-full !max-w-5xl">
+    <DialogHeader>
+      <DialogTitle>Gérer les absences</DialogTitle>
+    </DialogHeader>
+
+    <AbsencesList onClose={() => setAbsListModal(false)} />
+  </DialogContent>
+</Dialog>
+
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <input
           type="text"
@@ -180,6 +213,25 @@ function Tournees() {
         >
           + Nouvelle tournée
         </button>
+        <button
+  className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded font-semibold transition"
+  onClick={() => {
+    // Si tu veux caler sur une tournée sélectionnée, setAbsDateDebut/Fin ici
+    setAbsDateDebut(dayjs().format('YYYY-MM-DD'))
+    setAbsDateFin(dayjs().format('YYYY-MM-DD'))
+    setAbsencesModal(true)
+  }}
+>
+  Déclarer des absences
+</button>
+
+ <button
+  className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded font-semibold transition"
+  onClick={() => setAbsListModal(true)}
+>
+  Gérer les absences
+</button>
+
       </div>
 
       {loading && <p className="text-gray-700">Chargement des tournées...</p>}

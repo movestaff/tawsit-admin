@@ -1929,3 +1929,136 @@ function authHeaders() {
   const societeId = localStorage.getItem('societe_id') || ''
   return { Authorization: `Bearer ${token}`, 'x-societe-id': societeId }
 }
+
+
+
+
+// ================== ABSENCES EMPLOYES ==================
+
+
+export async function createAbsencesBulk(items: Array<{ employe_id: string; date_debut: string; date_fin: string; motif?: string }>) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('Payload invalide: items[] requis');
+  }
+  const res = await fetch(`${API_BASE_URL}/tournees/absences/bulk`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+
+export async function searchAbsences(params: {
+  from?: string; to?: string; employe_id?: string; departement?: string; service?: string; matricule?: string; q?: string;
+  page?: number; limit?: number;
+}) {
+  const usp = new URLSearchParams();
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && `${v}` !== '') usp.set(k, String(v));
+  });
+  const res = await fetch(`${API_BASE_URL}/tournees/absences/search${usp.toString() ? `?${usp.toString()}` : ''}`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * Liste des absents actifs pour une date
+ * GET /tournees/absences/actifs?date=YYYY-MM-DD
+ */
+export async function getAbsentsDuJour(date?: string) {
+  const usp = new URLSearchParams();
+  if (date) usp.set('date', date);
+  const res = await fetch(`${API_BASE_URL}/tournees/absences/actifs${usp.toString() ? `?${usp.toString()}` : ''}`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<string[]>; // array d'employe_id
+}
+
+/**
+ * État présents/absents pour une tournée à une date
+ * GET /tournees/:tourneeId/etat-presence?date=YYYY-MM-DD
+ */
+export async function getEtatPresenceTournee(tourneeId: string, date?: string) {
+  const usp = new URLSearchParams();
+  if (date) usp.set('date', date);
+  const res = await fetch(`${API_BASE_URL}/tournees/${tourneeId}/etat-presence${usp.toString() ? `?${usp.toString()}` : ''}`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * Recherche paginée d'employés 
+ * GET /employes/search?q=&matricule=&departement=&service=&onlyActifs=true&page=1&limit=25
+ * (Si tu n'as pas encore cet endpoint, je peux te fournir le handler côté backend.)
+ */
+export async function searchEmployes(params: {
+  q?: string; matricule?: string; departement?: string; service?: string; onlyActifs?: boolean; page?: number; limit?: number;
+}) {
+  const usp = new URLSearchParams();
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && `${v}` !== '') usp.set(k, String(v));
+  });
+  const res = await fetch(`${API_BASE_URL}/employes/search${usp.toString() ? `?${usp.toString()}` : ''}`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ items: any[]; total: number; page: number; limit: number }>;
+}
+
+/**
+ * Listes distinctes pour filtres (département, service)
+ * GET /employes/distincts
+ */
+export async function getEmployeDistincts() {
+  const res = await fetch(`${API_BASE_URL}/employes/distincts`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ departements: string[]; services: string[] }>;
+}
+
+// Détails d’une absence (optionnel pour pré-remplir l’édition)
+export async function getAbsenceById(id: string) {
+  const res = await fetch(`${API_BASE_URL}/tournees/absences/${id}`, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Mise à jour d’une absence
+export async function updateAbsence(
+  id: string,
+  payload: { date_debut: string; date_fin: string; motif?: string }
+) {
+  const res = await fetch(`${API_BASE_URL}/tournees/absences/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders('application/json'),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Suppression d’une absence
+export async function deleteAbsence(id: string) {
+  const res = await fetch(`${API_BASE_URL}/tournees/absences/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders('application/json'),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
