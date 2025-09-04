@@ -94,8 +94,7 @@ export default function AbsencesList({ onClose }: Props) {
 
   return (
     <div className="w-full">
-      <h3 className="text-lg font-semibold mb-3">Absences déclarées</h3>
-
+      
       {/* Filtres */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
         <div className="md:col-span-2">
