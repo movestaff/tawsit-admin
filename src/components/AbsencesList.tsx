@@ -4,6 +4,7 @@ import { searchAbsences, updateAbsence, deleteAbsence } from "../lib/api";
 import { Input } from "./ui/input";
 import { Select } from "./ui/select";
 import { Button } from "./ui/button";
+import { Pencil, Trash } from "lucide-react";
 
 type AbsenceRow = {
   id: string;
@@ -120,7 +121,7 @@ export default function AbsencesList({ onClose }: Props) {
             {/* Optionnel: injecter ici tes listes distinctes si tu veux */}
           </Select>
         </div>
-        <div className="md:col-span-12 flex gap-2">
+        <div className="md:col-span-12 flex justify-end gap-2">
           <Button onClick={fetchRows}>Rechercher</Button>
           <Button variant="outline" onClick={resetFilters}>Réinitialiser</Button>
           {onClose && <Button variant="outline" onClick={onClose}>Fermer</Button>}
@@ -177,10 +178,15 @@ export default function AbsencesList({ onClose }: Props) {
                         <Button variant="outline" onClick={()=>setEditId(null)}>Annuler</Button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <Button variant="outline" onClick={()=>startEdit(r)}>Modifier</Button>
-                        <Button variant="destructive" onClick={()=>remove(r.id)}>Supprimer</Button>
-                      </div>
+                      <div className="flex gap-2 ">
+  <Button variant="ghost" size="sm" onClick={() => startEdit(r)}>
+    <Pencil className="w-5 h-5 text-blue-600" />
+  </Button>
+  <Button variant="ghost" size="sm" onClick={() => remove(r.id)}>
+    <Trash className="w-5 h-5 text-red-600" />
+  </Button>
+</div>
+
                     )}
                   </td>
                 </tr>
