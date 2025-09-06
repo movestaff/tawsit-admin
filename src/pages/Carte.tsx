@@ -64,7 +64,7 @@ const Carte = () => {
     const fetchPositions = async () => {
       try {
         const data = await fetchPositionsConducteurs()
-        console.log('Positions récupérées:', data)
+        //console.log('Positions récupérées:', data)
         const filtres = selectedTourneeId
           ? data.filter((p: any) => p.tournee_id === selectedTourneeId)
           : data
