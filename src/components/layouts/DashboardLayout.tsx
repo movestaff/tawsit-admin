@@ -1,9 +1,11 @@
-// ✅ Fichier : src/components/layouts/DashboardLayout.tsx
+// src/components/layouts/DashboardLayout.tsx
 import React, { Suspense, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { FaTachometerAlt, FaMapMarkerAlt, FaBus, FaUsersCog, FaCogs, FaCalendarAlt, FaReceipt, FaBars, FaTimes } from 'react-icons/fa'
 import logo from '../../assets/logo.png'
 import LogoutButton from '../LogoutButton'
+import Header from '../Header'
+
 
 const SidebarLinks = ({ onClick }: { onClick?: () => void }) => (
   <nav className="flex-1 px-4 py-6 space-y-4 text-sm font-medium">
@@ -46,9 +48,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           <span className="font-bold text-lg tracking-wide"></span>
         </div>
         <SidebarLinks />
-        <div className="mt-auto px-4 pb-6">
-          <LogoutButton />
-        </div>
+        
       </aside>
 
       {/* Sidebar mobile */}
@@ -83,11 +83,15 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       {/* Contenu principal */}
+
+      <div className="flex-1 flex flex-col">
+      <Header />
       <main className="flex-1 p-6 overflow-y-auto mt-[64px] md:mt-0">
         <Suspense fallback={<div style={{ textAlign: 'center', marginTop: '2rem' }}>Chargement du module...</div>}>
           {children}
         </Suspense>
       </main>
+      </div>
     </div>
   )
 }

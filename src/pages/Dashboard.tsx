@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CalendarDays, Download, Filter } from 'lucide-react';
 import { KpiCard } from '../components/Tdb/KpiCard';
-//import PerformanceChart  from '../components/Tdb/PerformanceChart';
+
 import { CostsChart } from '../components/Tdb/CostsChart';
 import { AlertsList } from '../components/Tdb/AlertsList';
 import { RegionDensityMap } from '../components/Tdb/RegionDensityMap';

@@ -2,31 +2,129 @@ import { useAuthStore } from '../store/authStore'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 
+// Helpers LS
+const readLS = <T,>(k: string, fb: T): T => {
+  try { const r = localStorage.getItem(k); return r ? (JSON.parse(r) as T) : fb } catch { return fb }
+}
+const writeLS = (k: string, v: unknown) => localStorage.setItem(k, JSON.stringify(v))
+
+// Tokens
+export function getAccessToken(): string | null {
+  return localStorage.getItem('token')
+}
+export function setAccessToken(token: string | null) {
+  if (token) localStorage.setItem('token', token)
+  else localStorage.removeItem('token')
+}
+export function getRefreshToken(): string | null {
+  return readLS<string | null>('refresh_token', null)
+}
+export function setRefreshToken(rt: string | null) {
+  if (rt) writeLS('refresh_token', rt)
+  else localStorage.removeItem('refresh_token')
+}
+
+type AuthInit = Omit<RequestInit, 'headers'> & { headers?: HeadersInit; _retry?: boolean }
+
+
 if (!API_BASE_URL) {
   throw new Error('❌ VITE_API_BASE_URL non défini dans .env')
 }
 
 
-async function fetchWithAuth(url: string, options?: RequestInit) {
-  const response = await fetch(url, options);
+// Tente un refresh sur 401 puis rejoue 1 fois
+let refreshPromise: Promise<string | null> | null = null
 
-  if (response.status === 401) {
-    console.warn('[API] ➜ 401 détecté ➜ Déconnexion forcée');
-    useAuthStore.getState().logout();
-    if (window.location.pathname !== '/') {
-      window.location.href = '/';
+async function refreshToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise
+  const rt = getRefreshToken()
+  if (!rt) return null
+
+  refreshPromise = (async () => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/authM/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: rt }),
+      })
+      if (!resp.ok) return null
+      const data = await resp.json() as { token?: string; refresh_token?: string }
+      const newAccess = data?.token || null
+      const newRefresh = data?.refresh_token || null
+      if (newAccess) setAccessToken(newAccess)
+      if (newRefresh) setRefreshToken(newRefresh)
+
+      // Propage dans le store si dispo
+      const st = useAuthStore.getState()
+      if (st?.checkSession) await st.checkSession()
+
+      return newAccess
+    } catch {
+      return null
+    } finally {
+      refreshPromise = null
     }
-    throw new Error('Session expirée. Veuillez vous reconnecter.');
-  }
+  })()
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'Erreur inconnue');
-  }
-
-  return response.json();
+  return refreshPromise
 }
 
+
+// Tente un refresh sur 401 puis rejoue 1 fois (sans passer _retry à fetch)
+export async function fetchWithAuth(
+  input: string,
+  init: AuthInit = {}
+): Promise<any> {
+  const url = input.startsWith('http')
+    ? input
+    : `${API_BASE_URL}/${input.replace(/^\//, '')}`
+
+  // On extrait _retry pour NE PAS l'envoyer à fetch
+  const { _retry, headers: initHeaders, ...restInit } = init
+
+  // Fusion des headers (HeadersInit)
+  const mergedHeaders: HeadersInit = {
+    ...(initHeaders || {}),
+    ...getAuthHeaders(typeof initHeaders === 'object' && 'Content-Type' in (initHeaders as any)
+      ? (initHeaders as any)['Content-Type']
+      : undefined),
+  }
+
+  // 1er appel
+  let res = await fetch(url, { ...restInit, headers: mergedHeaders })
+
+  // Si 401 et pas encore retenté, on refresh puis on rejoue 1 fois
+  if (res.status === 401 && !_retry) {
+    const newToken = await refreshToken()
+    if (newToken) {
+      const retryHeaders: HeadersInit = {
+        ...(initHeaders || {}),
+        ...getAuthHeaders(
+          typeof initHeaders === 'object' && 'Content-Type' in (initHeaders as any)
+            ? (initHeaders as any)['Content-Type']
+            : undefined
+        ),
+      }
+      // Rejoue sans _retry dans l'objet fetch (flag seulement en local)
+      res = await fetch(url, { ...restInit, headers: retryHeaders })
+      if (res.status === 401) {
+        useAuthStore.getState().logout()
+        throw new Error('Unauthorized after refresh')
+      }
+    } else {
+      useAuthStore.getState().logout()
+      throw new Error('Session expired')
+    }
+  }
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || `HTTP ${res.status}`)
+  }
+
+  const ct = res.headers.get('content-type') || ''
+  return ct.includes('application/json') ? res.json() : res.text()
+}
 
 
 // ✅ Injecte automatiquement le token et la société via les headers requis par le middleware backend
@@ -1962,6 +2060,9 @@ export async function searchAbsences(params: {
     method: 'GET',
     headers: getAuthHeaders('application/json'),
   });
+
+
+
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -2061,4 +2162,26 @@ export async function deleteAbsence(id: string) {
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+
+
+//======================Profils ====================
+
+// api.ts
+export type ProfileDTO = { id: string; display_name: string | null }
+
+export async function loadProfile(): Promise<ProfileDTO | null> {
+  try {
+    const data = await fetchWithAuth(`${API_BASE_URL}/authM/me`, {
+      method: 'GET',
+      headers: getAuthHeaders('application/json'),
+    })
+    
+    return {
+      id: data?.id ?? 'me',
+      display_name: data?.display_name ?? null,
+    }
+  } catch {
+    return null
+  }
 }

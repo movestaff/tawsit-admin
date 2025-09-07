@@ -44,16 +44,7 @@ return (
     >
       <FaBus /> Gestion des tournées
     </NavLink>
-    <NavLink
-      to="/parametres"
-      className={({ isActive }) =>
-        `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-700 transition ${
-          isActive ? 'bg-green-800' : ''
-        }`
-      }
-    >
-      <FaUsersCog /> Paramétrage
-    </NavLink>
+   
 
 
     <NavLink
