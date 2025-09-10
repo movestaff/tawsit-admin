@@ -2185,3 +2185,143 @@ export async function loadProfile(): Promise<ProfileDTO | null> {
     return null
   }
 }
+
+
+
+// ================== ADMIN — RESET MOT DE PASSE (mode direct) ==================
+/**
+ * Réinitialise le mot de passe d’un utilisateur (mode "direct").
+ * Backend: POST /admin/users/:id/reset-password
+ * Headers: Authorization + x-societe-id injectés par getAuthHeaders(...)
+ */
+export async function adminResetPasswordDirect(
+  userId: string,
+  newPassword: string,
+  reason?: string
+): Promise<{ ok: true; mode: 'direct'; userId: string; must_change_password: boolean }> {
+  if (!userId || !newPassword || newPassword.length < 8) {
+    throw new Error('Paramètres invalides (userId requis, mot de passe >= 8 caractères).')
+  }
+
+  const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/reset-password`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'), // ✅ modèle existant
+    body: JSON.stringify({ newPassword, reason }),
+  })
+
+  if (!res.ok) {
+    // Aligne la gestion d’erreurs sur le reste du fichier
+    const errText = await res.text().catch(() => '')
+    throw new Error(errText || 'Échec du reset mot de passe (admin)')
+  }
+
+  return res.json()
+}
+
+
+// ================== ADMIN — GENERATE RECOVERY LINK ==================
+/**
+ * Génère un lien de récupération (mode "link") pour un utilisateur.
+ * Backend: POST /admin/users/:id/generate-recovery-link
+ * Headers: Authorization + x-societe-id via getAuthHeaders(...)
+ */
+export async function adminGenerateRecoveryLink(
+  userId: string,
+  redirectBase?: string,
+  reason?: string
+): Promise<{ ok: true; mode: 'link'; userId: string; action_link: string | null; reason: string | null }> {
+  if (!userId) {
+    throw new Error('Paramètres invalides (userId requis).')
+  }
+
+  const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/generate-recovery-link`, {
+    method: 'POST',
+    headers: getAuthHeaders('application/json'), // ✅ conforme à ton modèle
+    body: JSON.stringify({ redirectBase, reason }),
+  })
+
+  if (!res.ok) {
+    // même style d’erreur que le reste du fichier
+    const errText = await res.text().catch(() => '')
+    throw new Error(errText || 'Échec de la génération du lien de recovery (admin)')
+  }
+
+  return res.json()
+}
+
+
+
+// ================== ADMIN — LISTE UTILISATEURS (profiles) ==================
+export type UserListFilters = {
+  page?: number;               // 1 par défaut
+  limit?: number;              // 10 par défaut
+  q?: string;                  // recherche globale (email | username | display_name)
+  role?: string;               // filtre exact
+  email?: string;              // ilike
+  username?: string;           // ilike
+  display_name?: string;       // ilike
+  sort_by?: 'created_at' | 'email' | 'username' | 'display_name' | 'role';
+  sort_dir?: 'asc' | 'desc';
+};
+
+export type UserListItem = {
+  id: string;
+  email: string | null;
+  username: string | null;
+  display_name: string | null;
+  role: string | null;
+  role_id: string | null;
+  societe_id: string | null;
+  created_at: string | null;
+};
+
+export type UserListResponse = {
+  ok: true;
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+  items: UserListItem[];
+};
+
+/**
+ * GET /admin/societes/:societeId/users
+ * Expose la liste paginée des utilisateurs d'une société, avec filtres multi-critères.
+ */
+export async function getUsersBySociete(
+  filters: UserListFilters = {}
+): Promise<UserListResponse> {
+  const params = new URLSearchParams();
+
+  if (filters.page) params.set('page', String(filters.page));
+  if (filters.limit) params.set('limit', String(filters.limit));
+  if (filters.q) params.set('q', filters.q);
+  if (filters.role) params.set('role', filters.role);
+  if (filters.email) params.set('email', filters.email);
+  if (filters.username) params.set('username', filters.username);
+  if (filters.display_name) params.set('display_name', filters.display_name);
+  if (filters.sort_by) params.set('sort_by', filters.sort_by);
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir);
+
+  const qs = params.toString();
+  const url = `${API_BASE_URL}/admin/users${qs ? `?${qs}` : ''}`;
+
+  // ✅ même concept que fetchTournees : fetchWithAuth + getAuthHeaders
+  return fetchWithAuth(url, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+}
+
+// ================== ADMIN — DISTINCTS POUR FILTRES (profiles) ==================
+export type UsersDistinctsResponse = {
+  roles: string[];
+};
+
+export async function getUsersDistincts(): Promise<UsersDistinctsResponse> {
+  const url = `${API_BASE_URL}/admin/users/distincts`;
+  return fetchWithAuth(url, {
+    method: 'GET',
+    headers: getAuthHeaders('application/json'),
+  });
+}

@@ -59,27 +59,45 @@ const FormulaireTournee: React.FC<Props> = ({ tournee, conducteurs, onSuccess, o
     const site_id = e.target.value
     const selected = sites.find(s => s.id === site_id)
     if (selected) {
-      setForm(prev => ({
-        ...prev,
-        site_id,
-        arrivee_lat: selected.latitude,
-        arrivee_lng: selected.longitude,
-      }))
-    }
+  setForm(prev => ({
+    ...prev,
+    site_id,
+    arrivee_lat: selected.latitude,
+    arrivee_lng: selected.longitude,
+  }))
+} else {
+  setForm(prev => ({
+    ...prev,
+    site_id: '',
+    arrivee_lat: '',
+    arrivee_lng: ''
+  }))
+}
+
   }
 
   const handleSubmit = async () => {
-    if (!form.nom  || !form.type || !form.conducteur_id) {
-      toast.error('Veuillez remplir tous les champs obligatoires.')
-      return
-    }
+    const requiredFields = ['nom', 'type', 'site_id', 'conducteur_id', 'hr_depart_prevu', 'hr_arrivee_prevu']
+    const missing = requiredFields.filter(field => !form[field as keyof typeof form])
+    if (missing.length > 0) {
+    toast.error(`Champs obligatoires manquants : ${missing.join(', ')}`)
+     return
+  }
+
+      const payload = { ...form }
+      const uuidFields = ['site_id', 'conducteur_id']
+      uuidFields.forEach(f => {
+      if (payload[f as keyof typeof payload] === '') {
+      delete payload[f as keyof typeof payload]
+      }
+  })
 
     try {
       if (tournee) {
-        await updateTournee(tournee.id, form)
+        await updateTournee(tournee.id, payload)
         toast.success('Tournée mise à jour !')
       } else {
-        await ajouterTournee(form)
+        await ajouterTournee(payload)
         toast.success('Tournée créée avec succès !')
       }
       onSuccess()

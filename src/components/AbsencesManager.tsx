@@ -87,6 +87,14 @@ export default function AbsencesManager({
     }
   }, [allSelectedOnPage, someSelectedOnPage]);
 
+  const resetSearch = () => {
+  setQ("");
+  setMatricule("");
+  setDepartement("");
+  setService("");
+  setPage(1);
+};
+
   // ---- Fetch filtres
   useEffect(() => {
     (async () => {
@@ -222,7 +230,7 @@ export default function AbsencesManager({
 
   {/* Boutons */}
   <div className="flex items-center gap-2 ml-auto">
-    <Button variant="outline" onClick={clearSelection}>
+    <Button variant="outline" onClick={resetSearch}>
       Réinitialiser
     </Button>
     <Button onClick={submitAbsences} disabled={!canSubmit}>

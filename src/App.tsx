@@ -12,6 +12,8 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
+import AuthLinkHandler from './components/AuthLinkHandler'
+import RequirePasswordChange from './components/RequirePasswordChange' 
 
 
 
@@ -39,7 +41,8 @@ const ListeExecutionsTournees = lazy(() => import ('./pages/ListeExecutionsTourn
 const GestionTournee = lazy(() => import ('./pages/GestionTournee'));
 const TooltipTest = lazy(() => import('./components/ui/TooltipTest'));
 const IAPropositions = lazy(() => import('./pages/IAPropositions'));
-
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const ConfigurationSysteme = lazy(() => import('./pages/ConfigurationSysteme'));
 
 
 
@@ -65,10 +68,12 @@ function App() {
   
   return (
     <BrowserRouter>
+      <AuthLinkHandler />
       <Suspense fallback={<div style={{ textAlign: 'center', marginTop: '2rem' }}>Chargement...</div>}>
         <Routes>
           {/* Page de login SANS layout */}
           <Route path="/" element={<LoginPage />} />
+           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Pages internes AVEC layout */}
           <Route
@@ -76,6 +81,8 @@ function App() {
             element={
               <PrivateRoute>
                 <DashboardLayout>
+                  
+                <RequirePasswordChange> {/* 🔒 CHANGE (ouverture) */}
                   <Routes>
                     <Route path="/select-societe" element={<SelectSocietePage />} />
                     <Route path="dashboard" element={<Dashboard />} />
@@ -99,8 +106,11 @@ function App() {
                     <Route path="gestion-tournee" element={<GestionTournee />} />
                     <Route path="tooltip-test" element={<TooltipTest />} />
                     <Route path="/ia/propositions" element={<IAPropositions />} />
+                    
+                    <Route path="/configuration-systeme" element={<ConfigurationSysteme />} />
 
                   </Routes>
+                  </RequirePasswordChange> {/* 🔒 CHANGE (fermeture) */}
                 </DashboardLayout>
               </PrivateRoute>
             }

@@ -30,7 +30,7 @@ const SidebarLinks = ({ onClick }: { onClick?: () => void }) => (
     <NavLink to="/facturation" className={nav => `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-700 transition ${nav.isActive ? 'bg-green-800' : ''}`} onClick={onClick}>
       <FaReceipt /> Facturation
     </NavLink>
-    <NavLink to="/config" className={nav => `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-700 transition ${nav.isActive ? 'bg-green-800' : ''}`} onClick={onClick}>
+    <NavLink to="/configuration-systeme" className={nav => `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-700 transition ${nav.isActive ? 'bg-green-800' : ''}`} onClick={onClick}>
       <FaCogs /> Configuration système
     </NavLink>
   </nav>

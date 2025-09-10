@@ -30,7 +30,7 @@ export default function LoginPage() {
     const access_token = data.session.access_token
 
     // 2️⃣ Appel backend pour récupérer sociétés + groupe
-    const { user, societes_autorisees, societe_par_defaut, groupe_id } = await loginWeb(email, password)
+     const { user, societes_autorisees, societe_par_defaut, groupe_id, must_change_password } = await loginWeb(email, password) 
 
     console.log('🟢 Connexion OK :', access_token, user)
 
@@ -39,6 +39,14 @@ export default function LoginPage() {
 
     localStorage.setItem('groupe_id', groupe_id)
     localStorage.setItem('societes', JSON.stringify(societes_autorisees || []))
+
+    // ⬇️ AJOUT : redirection obligatoire si le backend a posé le flag
+if (must_change_password === true) {
+  
+  localStorage.setItem('must_change_password', 'true')
+  navigate('/reset-password')
+  return; // on stoppe le flow normal (pas de sélection de société)
+}
 
     if (societes_autorisees?.length === 1) {
       setSocieteId(societe_par_defaut)
