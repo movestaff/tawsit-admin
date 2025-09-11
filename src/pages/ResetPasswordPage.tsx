@@ -90,7 +90,7 @@ export default function ResetPasswordPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-2xl py-2 font-medium bg-black text-white disabled:opacity-60"
+            className="w-full rounded-2xl py-2 font-medium bg-[#228B22] text-white hover:bg-[#1e7a1e] disabled:opacity-60"
           >
             {loading ? 'Enregistrement…' : 'Enregistrer'}
           </button>
