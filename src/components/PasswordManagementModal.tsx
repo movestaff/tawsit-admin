@@ -151,7 +151,7 @@ export default function PasswordManagementModal({ open, onClose }: Props) {
       setBusyAction('link')
       const r = await adminGenerateRecoveryLink(
         selected.id,
-        `${window.location.origin}/auth/callback?next=/reset-password`,
+         window.location.origin,
         reason || undefined
       )
       if ('ok' in r && r.ok) {
