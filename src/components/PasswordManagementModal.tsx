@@ -10,7 +10,10 @@ import {
 } from '../lib/api'
 import { toast } from 'react-toastify'
 
-/** Petit hook de debounce générique */
+// ✅ Tawsit: utilisation du composant Button
+import { Button } from '../components/ui/button'
+
+/** Petit hook de debounce générique (inchangé) */
 function useDebounced<T>(value: T, delay = 350) {
   const [v, setV] = useState(value)
   useEffect(() => {
@@ -26,7 +29,7 @@ type Props = {
 }
 
 export default function PasswordManagementModal({ open, onClose }: Props) {
-  // Pagination & tri
+  // Pagination & tri (logique inchangée – UI tri supprimée)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
   const [sortBy, setSortBy] = useState<UserListFilters['sort_by']>('created_at')
@@ -162,45 +165,53 @@ export default function PasswordManagementModal({ open, onClose }: Props) {
     }
   }
 
+  // ✅ Styles Tawsit centralisés
+  const inputBase =
+    'border border-gray-300 rounded-xl p-2 w-full focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600'
+  const selectBase = inputBase
+  const cardBase = 'border rounded-2xl shadow-sm bg-white'
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-5xl rounded-2xl bg-white shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="text-lg font-semibold">Gestion des mots de passe utilisateurs</h2>
-          <button className="text-gray-500 hover:text-black" onClick={onClose}>✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
+      <div className="w-full max-w-5xl rounded-2xl bg-white shadow-lg border border-gray-200">
+        {/* Header Tawsit */}
+        <div className="flex items-center justify-between px-6 py-4 border-b rounded-t-2xl">
+          <h2 className="text-lg font-semibold">Gestion des mots de passe</h2>
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/10" onClick={onClose}>
+            ✕
+          </Button>
         </div>
 
-        {/* Filtres */}
-        <div className="px-5 py-3 grid grid-cols-1 md:grid-cols-6 gap-3">
+        {/* Filtres (sans 'Trier par') */}
+        <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-6 gap-3">
           <input
-            className="border rounded-xl p-2 md:col-span-2"
+            className={`${inputBase} md:col-span-2`}
             placeholder="Recherche globale (email, username, nom)"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
 
           <input
-            className="border rounded-xl p-2"
+            className={inputBase}
             placeholder="Email contient…"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <input
-            className="border rounded-xl p-2"
+            className={inputBase}
             placeholder="Username contient…"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
           <input
-            className="border rounded-xl p-2"
+            className={inputBase}
             placeholder="Nom à afficher contient…"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
           />
 
           <select
-            className="border rounded-xl p-2"
+            className={selectBase}
             value={role || ''}
             onChange={(e) => setRole(e.target.value || undefined)}
           >
@@ -209,58 +220,21 @@ export default function PasswordManagementModal({ open, onClose }: Props) {
               <option key={r} value={r}>{r}</option>
             ))}
           </select>
-
-          <div className="flex gap-2 items-center md:col-span-2">
-            <label className="text-sm">Trier par</label>
-            <select
-              className="border rounded-xl p-2"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as UserListFilters['sort_by'])}
-            >
-              <option value="created_at">Date création</option>
-              <option value="email">Email</option>
-              <option value="username">Username</option>
-              <option value="display_name">Nom affiché</option>
-              <option value="role">Rôle</option>
-            </select>
-            <select
-              className="border rounded-xl p-2"
-              value={sortDir}
-              onChange={(e) => setSortDir(e.target.value as UserListFilters['sort_dir'])}
-            >
-              <option value="desc">desc</option>
-              <option value="asc">asc</option>
-            </select>
-
-            <select
-              className="border rounded-xl p-2 ml-auto"
-              value={limit}
-              onChange={(e) => {
-                const v = parseInt(e.target.value, 10)
-                setLimit(Number.isFinite(v) ? v : 10)
-                setPage(1)
-              }}
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
         </div>
 
         {/* Liste + panneau d’action */}
-        <div className="px-5 pb-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Liste */}
-          <div className="lg:col-span-2 border rounded-xl overflow-hidden">
+          <div className={`${cardBase} lg:col-span-2 overflow-hidden`}>
             <div className="max-h-[48vh] overflow-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th className="text-left p-2">Nom affiché</th>
-                    <th className="text-left p-2">Email</th>
-                    <th className="text-left p-2">Username</th>
-                    <th className="text-left p-2">Rôle</th>
-                    <th className="text-left p-2">Action</th>
+                <thead className="sticky top-0 bg-gray-50">
+                  <tr className="text-left">
+                    <th className="p-3">Nom affiché</th>
+                    <th className="p-3">Email</th>
+                    <th className="p-3">Username</th>
+                    <th className="p-3">Rôle</th>
+                    <th className="p-3">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,54 +242,74 @@ export default function PasswordManagementModal({ open, onClose }: Props) {
                     <tr><td className="p-4 text-center" colSpan={5}>Chargement…</td></tr>
                   ) : items.length === 0 ? (
                     <tr><td className="p-4 text-center" colSpan={5}>Aucun utilisateur</td></tr>
-                  ) : items.map((u) => (
-                    <tr key={u.id} className={selected?.id === u.id ? 'bg-green-50' : ''}>
-                      <td className="p-2">{u.display_name || '—'}</td>
-                      <td className="p-2">{u.email || '—'}</td>
-                      <td className="p-2">{u.username || '—'}</td>
-                      <td className="p-2">{u.role || '—'}</td>
-                      <td className="p-2">
-                        <button
-                          className="px-2 py-1 rounded-lg border hover:bg-gray-50"
-                          onClick={() => setSelected(u)}
-                        >
-                          Sélectionner
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  ) : items.map((u, idx) => (
+  <tr
+    key={u.id}
+    onClick={() => setSelected(u)}
+    className={`cursor-pointer transition-colors 
+      ${idx % 2 ? 'bg-white' : 'bg-gray-50/60'} 
+      hover:bg-green-100 
+      ${selected?.id === u.id ? 'bg-green-200 font-medium' : ''}`}
+  >
+    <td className="p-3">{u.display_name || '—'}</td>
+    <td className="p-3">{u.email || '—'}</td>
+    <td className="p-3">{u.username || '—'}</td>
+    <td className="p-3">{u.role || '—'}</td>
+  </tr>
+))}
                 </tbody>
               </table>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between p-3 border-t text-sm">
-              <div>{total} utilisateur(s)</div>
-              <div className="flex gap-2">
-                <button
-                  className="px-3 py-1 rounded-lg border disabled:opacity-50"
+            {/* Footer : pagination gauche / limit à droite */}
+            <div className="flex items-center justify-between p-3 border-t text-sm bg-white rounded-b-2xl">
+              {/* ⬅️ Précédent / Suivant à gauche */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  Précédent
-                </button>
+                  ◀ Précédent
+                </Button>
                 <div className="px-2 py-1">Page {page} / {totalPages}</div>
-                <button
-                  className="px-3 py-1 rounded-lg border disabled:opacity-50"
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={!hasMore}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Suivant
-                </button>
+                  Suivant ▶
+                </Button>
+              </div>
+
+              {/* ➡️ Lignes par page à droite */}
+              <div className="flex items-center gap-2">
+                <span>{total} utilisateur(s)</span>
+                <label className="text-sm">Lignes par page :</label>
+                <select
+                  className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600"
+                  value={limit}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10)
+                    setLimit(Number.isFinite(v) ? v : 10)
+                    setPage(1)
+                  }}
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
               </div>
             </div>
           </div>
 
           {/* Panneau d’action */}
-          <div className="border rounded-xl p-3 flex flex-col gap-3">
+          <div className={`${cardBase} p-4 flex flex-col gap-3`}>
             <div className="font-medium">Utilisateur sélectionné</div>
             {selected ? (
-              <div className="rounded-lg border p-3 text-sm">
+              <div className="rounded-xl border p-3 text-sm bg-gray-50">
                 <div><span className="text-gray-500">Nom :</span> {selected.display_name || '—'}</div>
                 <div><span className="text-gray-500">Email :</span> {selected.email || '—'}</div>
                 <div><span className="text-gray-500">Username :</span> {selected.username || '—'}</div>
@@ -327,59 +321,65 @@ export default function PasswordManagementModal({ open, onClose }: Props) {
 
             <label className="text-sm font-medium mt-2">Raison (journalisation)</label>
             <input
-              className="border rounded-xl p-2"
+              className={inputBase}
               placeholder="Optionnel"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
 
+            {/* Reset direct */}
             <div className="mt-2 space-y-2">
               <div className="text-sm font-medium">Reset direct</div>
               <input
-                className="border rounded-xl p-2 w-full"
+                className={inputBase}
                 type="password"
                 placeholder="Nouveau mot de passe (min. 8)"
                 value={newPwd}
                 onChange={(e) => setNewPwd(e.target.value)}
               />
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 disabled={!selected || busyAction === 'reset'}
                 onClick={onResetDirect}
-                className="w-full rounded-xl py-2 border bg-black text-white disabled:opacity-50"
               >
                 {busyAction === 'reset' ? 'Réinitialisation…' : 'Réinitialiser (direct)'}
-              </button>
+              </Button>
             </div>
 
+            {/* Lien de recovery */}
             <div className="mt-2 space-y-2">
               <div className="text-sm font-medium">Générer lien de recovery</div>
-              <button
+              <Button
+                variant="outline"
+                size="md"
                 disabled={!selected || busyAction === 'link'}
                 onClick={onGenerateLink}
-                className="w-full rounded-xl py-2 border hover:bg-gray-50 disabled:opacity-50"
               >
                 {busyAction === 'link' ? 'Génération…' : 'Générer le lien'}
-              </button>
+              </Button>
+
               {generatedLink && (
                 <div className="text-xs bg-gray-50 border rounded-xl p-2 break-all">
                   <div className="mb-1 font-medium">Lien généré :</div>
                   <div className="mb-2">{generatedLink}</div>
-                  <button
-                    className="px-2 py-1 rounded-lg border hover:bg-white"
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       navigator.clipboard.writeText(generatedLink)
                       toast.info('Lien copié')
                     }}
                   >
                     Copier
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
 
-            <button onClick={onClose} className="mt-auto rounded-xl py-2 border hover:bg-gray-50">
-              Fermer
-            </button>
+            <div className="mt-auto flex justify-end">
+              <Button variant="outline" onClick={onClose}>Fermer</Button>
+            </div>
           </div>
         </div>
       </div>

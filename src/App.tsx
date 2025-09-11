@@ -17,6 +17,8 @@ import RequirePasswordChange from './components/RequirePasswordChange'
 
 
 
+
+
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SelectSocietePage = lazy(() => import('./pages/SelectSocietePage'));
@@ -43,6 +45,8 @@ const TooltipTest = lazy(() => import('./components/ui/TooltipTest'));
 const IAPropositions = lazy(() => import('./pages/IAPropositions'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const ConfigurationSysteme = lazy(() => import('./pages/ConfigurationSysteme'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'))
+
 
 
 
@@ -73,6 +77,8 @@ function App() {
         <Routes>
           {/* Page de login SANS layout */}
           <Route path="/" element={<LoginPage />} />
+
+           <Route path="/auth/callback" element={<AuthCallback />} />
            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Pages internes AVEC layout */}
